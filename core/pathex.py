@@ -1,5 +1,6 @@
 from pathlib import Path
-from os import scandir
+from os import scandir, remove
+import datetime
 
 image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
 
@@ -8,10 +9,12 @@ def write_bytes_safe(target_path, source_path):
     """
     Safely writes from source to target by first writing to a temp file.
     """
-    temp_path = target_path.with_suffix('.tmp')
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    temp_path = target_path.with_name(target_path.stem + "_temp_" + timestamp + target_path.suffix)
 
-    # Copy data from source to temp in chunks
+    # Open the source file
     with open(source_path, 'rb') as src, open(temp_path, 'wb') as tmp:
+        # Copy data from source to temp in chunks
         for chunk in iter(lambda: src.read(4096), b''):
             tmp.write(chunk)
 
@@ -19,6 +22,9 @@ def write_bytes_safe(target_path, source_path):
     if target_path.exists():
         target_path.unlink()
     temp_path.rename(target_path)
+
+    # Delete the original source file
+    remove(source_path)
 
 
 def scantree(path):
