@@ -7,6 +7,7 @@ from core.leras import nn
 
 tf = nn.tf
 
+
 class Saveable():
     def __init__(self, name=None):
         self.name = name
@@ -39,66 +40,86 @@ class Saveable():
         nn.batch_set_value (tuples)
 
     def save_weights(self, filename, force_dtype=None):
-        d = {}
-        weights = self.get_weights()
-
         if self.name is None:
             raise Exception("name must be defined.")
 
         name = self.name
+        weights = self.get_weights()
 
-        for w in weights:
-            w_val = nn.tf_sess.run (w).copy()
-            w_name_split = w.name.split('/', 1)
-            if name != w_name_split[0]:
-                raise Exception("weight first name != Saveable.name")
+        # Temporary file path
+        temp_filename = Path(filename).with_suffix('.tmp')
 
-            if force_dtype is not None:
-                w_val = w_val.astype(force_dtype)
+        with open(temp_filename, 'wb') as f:
+            pickle.dump(len(weights), f)  # Dump the number of weights as metadata
 
-            d[ w_name_split[1] ] = w_val
+            for w in weights:
+                w_val = nn.tf_sess.run(w)
 
-        d_dumped = pickle.dumps (d, 4)
-        pathex.write_bytes_safe ( Path(filename), d_dumped )
+                w_name_split = w.name.split('/', 1)
+                if name != w_name_split[0]:
+                    raise Exception("weight first name != Saveable.name")
+
+                if force_dtype is not None:
+                    w_val = w_val.astype(force_dtype)
+
+                pickle.dump({w_name_split[1]: w_val}, f)
+
+        # Use the updated write_bytes_safe
+        pathex.write_bytes_safe(Path(filename), temp_filename)
 
     def load_weights(self, filename):
-        """
-        returns True if file exists
-        """
         filepath = Path(filename)
-        if filepath.exists():
-            result = True
-            d_dumped = filepath.read_bytes()
-            d = pickle.loads(d_dumped)
-        else:
+        if not filepath.exists():
             return False
-
-        weights = self.get_weights()
 
         if self.name is None:
             raise Exception("name must be defined.")
 
-        try:
-            tuples = []
-            for w in weights:
-                w_name_split = w.name.split('/')
-                if self.name != w_name_split[0]:
-                    raise Exception("weight first name != Saveable.name")
+        with open(filename, 'rb') as f:
+            try:
+                # Attempt to load the first piece of data, which in the new format is the number of weights
+                first_item = pickle.load(f)
 
-                sub_w_name = "/".join(w_name_split[1:])
+                if isinstance(first_item, int):
+                    # New format detected: first_item is the number of weights
+                    num_weights = first_item
+                    tuples = []
 
-                w_val = d.get(sub_w_name, None)
+                    for _ in range(num_weights):
+                        w_dict = pickle.load(f)
+                        for w_name, w_val in w_dict.items():
+                            full_w_name = f"{self.name}/{w_name}"
+                            for w in self.get_weights():
+                                if w.name == full_w_name:
+                                    w_val = np.reshape(w_val, w.shape.as_list())
+                                    tuples.append((w, w_val))
+                                    break
 
-                if w_val is None:
-                    #io.log_err(f"Weight {w.name} was not loaded from file {filename}")
-                    tuples.append ( (w, w.initializer) )
+                    nn.batch_set_value(tuples)
+
                 else:
-                    w_val = np.reshape( w_val, w.shape.as_list() )
-                    tuples.append ( (w, w_val) )
+                    # Old format detected: first_item is the entire weights dictionary
+                    d = first_item
+                    weights = self.get_weights()
+                    tuples = []
 
-            nn.batch_set_value(tuples)
-        except:
-            return False
+                    for w in weights:
+                        w_name_split = w.name.split('/')
+                        if self.name != w_name_split[0]:
+                            raise Exception("weight first name != Saveable.name")
+
+                        sub_w_name = "/".join(w_name_split[1:])
+                        w_val = d.get(sub_w_name, None)
+
+                        if w_val is not None:
+                            w_val = np.reshape(w_val, w.shape.as_list())
+                            tuples.append((w, w_val))
+
+                    nn.batch_set_value(tuples)
+
+            except pickle.UnpicklingError:
+                # Handle the exception if the file format is neither new nor old
+                return False
 
         return True
 
