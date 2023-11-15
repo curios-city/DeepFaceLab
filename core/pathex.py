@@ -14,8 +14,8 @@ def write_bytes_safe(target_path, source_path):
 
     # Open the source file
     with open(source_path, 'rb') as src, open(temp_path, 'wb') as tmp:
-        # Copy data from source to temp in chunks
-        for chunk in iter(lambda: src.read(4096), b''):
+        # Copy data from source to temp in chunks of 64Kb
+        for chunk in iter(lambda: src.read(65536), b''):
             tmp.write(chunk)
 
     # Replace target file with temp file
