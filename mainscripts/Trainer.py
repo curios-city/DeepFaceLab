@@ -35,7 +35,7 @@ class TensorBoardTool:
             tb_argv.append("--bind_all")
         tb.configure(argv=tb_argv)
         url = tb.launch()
-        io.log_info('Launched TensorBoard at {}\n'.format(url))
+        io.log_info('在{}启动了TensorBoard\n'.format(url))
 
 def process_img_for_tensorboard(input_img):
     # convert format from bgr to rgb
@@ -128,7 +128,7 @@ def trainerThread (s2c, c2s, e,
 
             def model_save():
                 if not debug and not is_reached_goal:
-                    io.log_info("Saving....", end='\r')
+                    io.log_info("保存中....", end='\r')
                     model.save()
                     shared_state['after_save'] = True
 
@@ -181,12 +181,20 @@ def trainerThread (s2c, c2s, e,
 
             if model.get_target_iter() != 0:
                 if is_reached_goal:
-                    io.log_info('Model already trained to target iteration. You can use preview.')
+                    io.log_info('模型已经训练到目标迭代。您可以使用预览功能.')
                 else:
-                    io.log_info('Starting. Target iteration: %d. Press "Enter" to stop training and save model.' % (
+                    io.log_info('开始运行中. 目标迭代: %d. 按下 Enter 停止训练并保存模型.' % (
                         model.get_target_iter()))
             else:
-                io.log_info('Starting. Press "Enter" to stop training and save model.')
+                io.log_info('')
+                io.log_info('启动中.....')
+                io.log_info('按 Enter 停止训练并保存进度')
+                io.log_info('按 Space 可以切换视图')
+                io.log_info('按 P可以刷新预览图')
+                io.log_info('按 S 可以保存训练进度')
+                io.log_info('')
+                io.log_info('|保存时间 |迭代次数 |单次时间 |源损失 |目标损失')
+                io.log_info('')
 
             last_save_time = time.time()
             last_preview_time = time.time()
@@ -211,22 +219,15 @@ def trainerThread (s2c, c2s, e,
                             try:
                                 exec(prog)
                             except Exception as e:
-                                print("Unable to execute program: %s" % prog)
+                                print("无法执行程序: %s" % prog)
 
                     if not is_reached_goal:
 
                         if model.is_first_run():
-                            io.log_info("")
                             io.log_info(
-                                "Trying to do the first iteration. If an error occurs, reduce the model parameters.")
-                            io.log_info("")
-
+                                "尝试进行第一次迭代。如果发生错误，请减少模型参数.")
                             if sys.platform[0:3] == 'win':
-                                io.log_info("!!!")
-                                io.log_info(
-                                    "Windows 10 users IMPORTANT notice. You should set this setting in order to work correctly.")
-                                io.log_info("https://i.imgur.com/B7cmDCB.jpg")
-                                io.log_info("!!!")
+                                io.log_info("AIBL论坛提醒您：按下Enter键可停止训练并保存模型.")
 
                         if gen_snapshot:
                             model.generate_training_state()
@@ -275,7 +276,7 @@ def trainerThread (s2c, c2s, e,
                         #     model.generate_training_state()
 
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
-                            io.log_info('Reached target iteration.')
+                            io.log_info('达到目标迭代.')
                             model_save()
                             is_reached_goal = True
                             io.log_info('You can use preview now.')
@@ -293,7 +294,7 @@ def trainerThread (s2c, c2s, e,
 
                 if io.is_colab():
                     if read_stopping_file():
-                        io.log_info('Stopping training due to stopping file!')
+                        io.log_info('由于停止文件，停止训练!')
                         write_stopping_file('false')
                         s2c.put({'op': 'close'})
 
@@ -481,7 +482,7 @@ def create_preview_pane_image(previews, selected_preview, loss_history,
 
 
 def main(**kwargs):
-    io.log_info("Running trainer.\r\n")
+    io.log_info("启动训练程序.\r\n")
 
     no_preview = kwargs.get('no_preview', False)
     flask_preview = kwargs.get('flask_preview', False)
