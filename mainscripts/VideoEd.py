@@ -24,10 +24,10 @@ def extract_video(input_file, output_dir, output_ext=None, fps=None):
         return
 
     if fps is None:
-        fps = io.input_int ("Enter FPS", 0, help_message="How many frames of every second of the video will be extracted. 0 - full fps")
+        fps = io.input_int ("Enter FPS", 0, help_message="视频的每一秒将被提取多少帧。0 -满FPS")
 
     if output_ext is None:
-        output_ext = io.input_str ("Output image format", "png", ["png","jpg"], help_message="png is lossless, but extraction is x10 slower for HDD, requires x10 more disk space than jpg.")
+        output_ext = io.input_str ("Output image format", "png", ["png","jpg"], help_message="png是无损的，但是提取对于HDD来说慢了10倍，需要比jpg多10倍的磁盘空间。")
 
     for filename in pathex.get_image_paths (output_path, ['.'+output_ext]):
         Path(filename).unlink()
@@ -63,10 +63,10 @@ def cut_video ( input_file, from_time=None, to_time=None, audio_track_id=None, b
         to_time = io.input_str ("To time", "00:00:00.000")
 
     if audio_track_id is None:
-        audio_track_id = io.input_int ("Specify audio track id.", 0)
+        audio_track_id = io.input_int ("指定音轨id。", 0)
 
     if bitrate is None:
-        bitrate = max (1, io.input_int ("Bitrate of output file in MB/s", 25) )
+        bitrate = max (1, io.input_int ("输出文件的比特率 MB/s", 25) )
 
     kwargs = {"c:v": "libx264",
               "b:v": "%dM" %(bitrate),
@@ -101,7 +101,7 @@ def denoise_image_sequence( input_dir, ext=None, factor=None ):
             image_paths_suffix = filepath.suffix
         else:
             if filepath.suffix != image_paths_suffix:
-                io.log_err(f"All images in {input_path.name} should be with the same extension.")
+                io.log_err(f"{input_path.name}中的所有图像应该具有相同的扩展名。")
                 return
 
     if factor is None:
@@ -221,7 +221,7 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
         fps = max (1, io.input_int ("Enter FPS", 25) )
 
     if not lossless and bitrate is None:
-        bitrate = max (1, io.input_int ("Bitrate of output file in MB/s", 16) )
+        bitrate = max (1, io.input_int ("输出文件的比特率 MB/s", 16) )
 
     input_image_paths = pathex.get_image_paths(input_path)
 
