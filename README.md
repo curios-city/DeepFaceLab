@@ -1,45 +1,10 @@
-<table align="center" border="0">
+首先是进行了详细的汉化和注释，主要是围绕着SAEHD模型训练相关的，其他旁支功能我暂时不看！
 
-<tr><td colspan=2 align="center">
+然后我把 python 3.6.8 升级到了 python 3.11.5，
+费了九牛二虎之力，因为pip并不能直接安装成功，且3.10之后，有一些旧的语法被移除了，例如pkdutils！
 
-# DeepFaceLab  
+关于tensorflow我也踩了大量的坑，比如你们看到的应该是它最高只能支持到 Python 3.9，
+关于tensorflow-gpu的版本在winsows+py3.11使用也是有很多考究的！
 
-<a href="https://arxiv.org/abs/2005.05535">
-
-<img src="https://static.arxiv.org/static/browse/0.3.0/images/icons/favicon.ico" width=14></img>
-https://arxiv.org/abs/2005.05535</a>
-
-
-### the leading software for creating deepfakes
-
-<img src="doc/DFL_welcome.png" align="center">
-
-</td></tr>
-<tr><td colspan=2 align="center">
-
-<p align="center">
-
-![](doc/logo_tensorflow.png)
-![](doc/logo_cuda.png)
-![](doc/logo_directx.png)
-
-</p>
-
-<tr><td colspan=2 align="center">
-  <tr><td colspan=2 align="center">
-
-# CHANGELOG 
-### [View most recent changes](CHANGELOG.md)
-
-<tr><td colspan=2 align="center">
-  <tr><td colspan=2 align="center">
-
-## Mini tutorial
-
-<a href="https://www.youtube.com/watch?v=kOIMXt8KK8M">
-
-<img src="doc/mini_tutorial.jpg" align="center">
-
-</a>
-
-</table>
+由于Github只能上传源码，这部分你们可以覆盖到deepfacelab原版的对应位置来使用！
+我将会打包环境另外提供下载链接（整合包），预计明天12月26日上传！
