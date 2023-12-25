@@ -89,7 +89,7 @@ class FacesetEnhancerSubprocessor(Subprocessor):
 
             nn.initialize (device_config)
 
-            intro_str = 'Running on %s.' % (client_dict['device_name'])
+            intro_str = '在 %s 运行.' % (client_dict['device_name'])
 
             self.log_info (intro_str)
 
@@ -101,7 +101,7 @@ class FacesetEnhancerSubprocessor(Subprocessor):
             try:
                 dflimg = DFLIMG.load (filepath)
                 if dflimg is None or not dflimg.has_data():
-                    self.log_err (f"{filepath.name} is not a dfl image file")
+                    self.log_err (f"{filepath.name} 不是 dfl 图像文件")
                 else:
                     dfl_dict = dflimg.get_dict()
 
@@ -119,14 +119,14 @@ class FacesetEnhancerSubprocessor(Subprocessor):
 
                     return (1, filepath, output_filepath)
             except:
-                self.log_err (f"Exception occured while processing file {filepath}. Error: {traceback.format_exc()}")
+                self.log_err (f"处理文件{filepath}时发生异常. 错误: {traceback.format_exc()}")
 
             return (0, filepath, None)
 
 def process_folder ( dirpath, cpu_only=False, force_gpu_idxs=None ):
 
     if PackedFaceset.path_contains(dirpath):
-        io.log_info (f'\n{dirpath} contains packed faceset! Unpack it first.\n')
+        io.log_info (f'\n{dirpath} 包含打包的人脸集！请先解包.\n')
         return
 
     device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_all_gpu=True) ) \
@@ -137,8 +137,8 @@ def process_folder ( dirpath, cpu_only=False, force_gpu_idxs=None ):
 
     dirpath_parts = '/'.join( dirpath.parts[-2:])
     output_dirpath_parts = '/'.join( output_dirpath.parts[-2:] )
-    io.log_info (f"Enhancing faceset in {dirpath_parts}")
-    io.log_info ( f"Processing to {output_dirpath_parts}")
+    io.log_info (f"增强人脸集 {dirpath_parts}")
+    io.log_info ( f"处理到 {output_dirpath_parts}")
 
     output_images_paths = pathex.get_image_paths(output_dirpath)
     if len(output_images_paths) > 0:
@@ -148,9 +148,9 @@ def process_folder ( dirpath, cpu_only=False, force_gpu_idxs=None ):
     image_paths = [Path(x) for x in pathex.get_image_paths( dirpath )]
     result = FacesetEnhancerSubprocessor ( image_paths, output_dirpath, device_config=device_config).run()
 
-    is_merge = io.input_bool (f"\r\nMerge {output_dirpath_parts} to {dirpath_parts} ?", True)
+    is_merge = io.input_bool (f"\r\n合并 {output_dirpath_parts} 到 {dirpath_parts} ?", True)
     if is_merge:
-        io.log_info (f"Copying processed files to {dirpath_parts}")
+        io.log_info (f"复制处理后的文件到 {dirpath_parts}")
 
         for (filepath, output_filepath) in result:
             try:
@@ -158,5 +158,5 @@ def process_folder ( dirpath, cpu_only=False, force_gpu_idxs=None ):
             except:
                 pass
 
-        io.log_info (f"Removing {output_dirpath_parts}")
+        io.log_info (f"删除 {output_dirpath_parts}")
         shutil.rmtree(output_dirpath)
