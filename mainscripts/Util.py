@@ -13,7 +13,7 @@ from samplelib import PackedFaceset
 
 def is_packed(input_path):
     if PackedFaceset.path_contains(input_path):
-        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        io.log_info (f'\n{input_path} 包含打包的人脸集！请先解压它.\n')
         return True
 
 def save_faceset_metadata_folder(input_path):
@@ -23,14 +23,14 @@ def save_faceset_metadata_folder(input_path):
 
     metadata_filepath = input_path / 'meta.dat'
 
-    io.log_info (f"Saving metadata to {str(metadata_filepath)}\r\n")
+    io.log_info (f"将元数据保存至 {str(metadata_filepath)}\r\n")
 
     d = {}
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
         dflimg = DFLIMG.load (filepath)
         if dflimg is None or not dflimg.has_data():
-            io.log_info(f"{filepath} is not a dfl image file")
+            io.log_info(f"{filepath} 不是 DFL 图像文件")
             continue
             
         dfl_dict = dflimg.get_dict()
@@ -40,12 +40,12 @@ def save_faceset_metadata_folder(input_path):
         with open(metadata_filepath, "wb") as f:
             f.write ( pickle.dumps(d) )
     except:
-        raise Exception( 'cannot save %s' % (filename) )
+        raise Exception( '无法保存 %s' % (filename) )
 
-    io.log_info("Now you can edit images.")
-    io.log_info("!!! Keep same filenames in the folder.")
-    io.log_info("You can change size of images, restoring process will downscale back to original size.")
-    io.log_info("After that, use restore metadata.")
+    io.log_info("现在您可以编辑图像.")
+    io.log_info("!!! 保持文件夹中的相同文件名.")
+    io.log_info("您可以更改图像的大小，还原过程将缩小回原始大小")
+    io.log_info("之后，请使用还原元数据.")
 
 def restore_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
@@ -53,10 +53,10 @@ def restore_faceset_metadata_folder(input_path):
     if is_packed(input_path) : return
 
     metadata_filepath = input_path / 'meta.dat'
-    io.log_info (f"Restoring metadata from {str(metadata_filepath)}.\r\n")
+    io.log_info (f"从{str(metadata_filepath)}恢复元数据.\r\n")
 
     if not metadata_filepath.exists():
-        io.log_err(f"Unable to find {str(metadata_filepath)}.")
+        io.log_err(f"找不到{str(metadata_filepath)}.")
 
     try:
         with open(metadata_filepath, "rb") as f:
@@ -67,7 +67,7 @@ def restore_faceset_metadata_folder(input_path):
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path, image_extensions=['.jpg'], return_Path_class=True), "Processing"):
         saved_data = d.get(filepath.name, None)
         if saved_data is None:
-            io.log_info(f"No saved metadata for {filepath}")
+            io.log_info(f"{filepath}没有保存的元数据")
             continue
         
         shape, dfl_dict = saved_data
@@ -91,7 +91,7 @@ def add_landmarks_debug_images(input_path):
 
     if is_packed(input_path) : return
 
-    io.log_info ("Adding landmarks debug images...")
+    io.log_info ("添加标记点调试图像...")
 
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
@@ -101,7 +101,7 @@ def add_landmarks_debug_images(input_path):
         dflimg = DFLIMG.load (filepath)
 
         if dflimg is None or not dflimg.has_data():
-            io.log_err (f"{filepath.name} is not a dfl image file")
+            io.log_err (f"{filepath.name} 不是DFL图像文件")
             continue
         
         if img is not None:
@@ -123,7 +123,7 @@ def recover_original_aligned_filename(input_path):
 
     if is_packed(input_path) : return
 
-    io.log_info ("Recovering original aligned filename...")
+    io.log_info ("恢复原始对齐后的文件名...")
 
     files = []
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
@@ -132,7 +132,7 @@ def recover_original_aligned_filename(input_path):
         dflimg = DFLIMG.load (filepath)
 
         if dflimg is None or not dflimg.has_data():
-            io.log_err (f"{filepath.name} is not a dfl image file")
+            io.log_err (f"{filepath.name} 不是DFL图像文件")
             continue
 
         files += [ [filepath, None, dflimg.get_source_filename(), False] ]
