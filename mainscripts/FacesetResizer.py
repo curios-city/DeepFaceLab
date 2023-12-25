@@ -67,14 +67,14 @@ class FacesetResizerSubprocessor(Subprocessor):
             self.output_dirpath = client_dict['output_dirpath']
             self.image_size = client_dict['image_size']
             self.face_type = client_dict['face_type']
-            self.log_info (f"Running on { client_dict['device_name'] }")
+            self.log_info (f"运行在{ client_dict['device_name'] }")
 
         #override
         def process_data(self, filepath):
             try:
                 dflimg = DFLIMG.load (filepath)
                 if dflimg is None or not dflimg.has_data():
-                    self.log_err (f"{filepath.name} is not a dfl image file")
+                    self.log_err (f"{filepath.name} 不是DFL图像文件")
                 else:
                     img = cv2_imread(filepath)
                     h,w = img.shape[:2]
@@ -168,12 +168,12 @@ class FacesetResizerSubprocessor(Subprocessor):
 def process_folder (dirpath):
 
     if PackedFaceset.path_contains(dirpath):
-        io.log_info (f'\n{dirpath} contains packed faceset! Unpack it first.\n')
+        io.log_info (f'\n{dirpath} 包含打包的人脸集！请先解包.\n')
         return
     
-    image_size = io.input_int(f"New image size", 512, valid_range=[128,2048])
+    image_size = io.input_int(f"新图像尺寸", 512, valid_range=[128,2048])
     
-    face_type = io.input_str ("Change face type", 'same', ['h','mf','f','wf','head','same']).lower()
+    face_type = io.input_str ("更改人脸类型", 'same', ['h','mf','f','wf','head','same']).lower()
     if face_type == 'same':
         face_type = None
     else:
@@ -189,8 +189,8 @@ def process_folder (dirpath):
 
     dirpath_parts = '/'.join( dirpath.parts[-2:])
     output_dirpath_parts = '/'.join( output_dirpath.parts[-2:] )
-    io.log_info (f"Resizing faceset in {dirpath_parts}")
-    io.log_info ( f"Processing to {output_dirpath_parts}")
+    io.log_info (f"调整{dirpath_parts}中的人脸大小")
+    io.log_info ( f"处理到{output_dirpath_parts}")
 
     output_images_paths = pathex.get_image_paths(output_dirpath)
     if len(output_images_paths) > 0:
@@ -200,9 +200,9 @@ def process_folder (dirpath):
     image_paths = [Path(x) for x in pathex.get_image_paths( dirpath )]
     result = FacesetResizerSubprocessor ( image_paths, output_dirpath, image_size, face_type).run()
 
-    is_merge = io.input_bool (f"\r\nMerge {output_dirpath_parts} to {dirpath_parts} ?", True)
+    is_merge = io.input_bool (f"\r\n将{output_dirpath_parts}合并到{dirpath_parts} ?", True)
     if is_merge:
-        io.log_info (f"Copying processed files to {dirpath_parts}")
+        io.log_info (f"将处理后的文件复制到{dirpath_parts}")
 
         for (filepath, output_filepath) in result:
             try:
@@ -210,5 +210,5 @@ def process_folder (dirpath):
             except:
                 pass
 
-        io.log_info (f"Removing {output_dirpath_parts}")
+        io.log_info (f"删除 {output_dirpath_parts}")
         shutil.rmtree(output_dirpath)
