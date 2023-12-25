@@ -96,7 +96,7 @@ class Devices(object):
             compute_cache_path = Path(os.environ['APPDATA']) / 'NVIDIA' / ('ComputeCache_ALL')
             os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
             if not compute_cache_path.exists():
-                io.log_info("Caching GPU kernels...")
+                io.log_info("缓存 GPU 内核..")
                 compute_cache_path.mkdir(parents=True, exist_ok=True)
                 
         import tensorflow
