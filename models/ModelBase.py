@@ -21,6 +21,7 @@ from samplelib import SampleGeneratorBase
 
 
 class ModelBase(object):
+    # 构造函数，初始化模型的各种参数
     def __init__(self, is_training=False,
                        is_exporting=False,
                        saved_models_path=None,
@@ -41,61 +42,62 @@ class ModelBase(object):
                        silent_start=False,
                        reduce_clutter=False,
                        **kwargs):
-        self.is_training = is_training
-        self.is_exporting = is_exporting
-        self.saved_models_path = saved_models_path
-        self.training_data_src_path = training_data_src_path
-        self.training_data_dst_path = training_data_dst_path
-        self.pretraining_data_path = pretraining_data_path
-        self.pretrained_model_path = pretrained_model_path
-        self.src_pak_name = src_pak_name
-        self.dst_pak_name = dst_pak_name
-        self.config_training_file = config_training_file
-        self.auto_gen_config = auto_gen_config
-        self.config_file_path = None
-        self.no_preview = no_preview
-        self.debug = debug
-        self.reset_training = False
-        self.reduce_clutter = reduce_clutter
+        self.is_training = is_training  # 是否处于训练模式
+        self.is_exporting = is_exporting  # 是否处于导出模式
+        self.saved_models_path = saved_models_path  # 保存模型的路径
+        self.training_data_src_path = training_data_src_path  # 训练数据源路径
+        self.training_data_dst_path = training_data_dst_path  # 训练数据目标路径
+        self.pretraining_data_path = pretraining_data_path  # 预训练数据路径
+        self.pretrained_model_path = pretrained_model_path  # 预训练模型路径
+        self.src_pak_name = src_pak_name  # 源数据包名称
+        self.dst_pak_name = dst_pak_name  # 目标数据包名称
+        self.config_training_file = config_training_file  # 训练配置文件
+        self.auto_gen_config = auto_gen_config  # 是否自动生成配置
+        self.config_file_path = None  # 配置文件路径
+        self.no_preview = no_preview  # 是否不显示预览
+        self.debug = debug  # 是否处于调试模式
+        self.reset_training = False  # 是否重置训练
+        self.reduce_clutter = reduce_clutter  # 是否减少杂乱信息
 
+
+        # 初始化模型类名和模型名
         self.model_class_name = model_class_name = Path(inspect.getmodule(self).__file__).parent.name.rsplit("_", 1)[1]
-
+        # 根据输入参数或者模型文件自动设置模型名
         if force_model_class_name is None:
             if force_model_name is not None:
                 self.model_name = force_model_name
             else:
                 while True:
-                    # gather all model dat files
+                    # 收集所有模型的数据文件
                     saved_models_names = []
                     for filepath in pathex.get_file_paths(saved_models_path):
                         filepath_name = filepath.name
                         if filepath_name.endswith(f'{model_class_name}_data.dat'):
                             saved_models_names += [ (filepath_name.split('_')[0], os.path.getmtime(filepath)) ]
 
-                    # sort by modified datetime
+                    # 根据修改时间对模型进行排序
                     saved_models_names = sorted(saved_models_names, key=operator.itemgetter(1), reverse=True )
                     saved_models_names = [ x[0] for x in saved_models_names ]
-
 
                     if len(saved_models_names) != 0:
                         if silent_start:
                             self.model_name = saved_models_names[0]
-                            io.log_info(f'Silent start: choosed model "{self.model_name}"')
+                            io.log_info(f'静默启动：选择的模型 "{self.model_name}"')
                         else:
-                            io.log_info ("Choose one of saved models, or enter a name to create a new model.")
-                            io.log_info ("[r] : rename")
-                            io.log_info ("[d] : delete")
-                            io.log_info ("")
+                            io.log_info("选择一个已保存的模型，或输入名称创建新模型。")
+                            io.log_info("[r] : 重命名")
+                            io.log_info("[d] : 删除")
+                            io.log_info("")
                             for i, model_name in enumerate(saved_models_names):
                                 s = f"[{i}] : {model_name} "
                                 if i == 0:
-                                    s += "- latest"
-                                io.log_info (s)
+                                    s += "- 上次进行"
+                                io.log_info(s)
 
-                            inp = io.input_str(f"", "0", show_default_value=False )
+                            inp = io.input_str(f"", "0", show_default_value=False)
                             model_idx = -1
                             try:
-                                model_idx = np.clip ( int(inp), 0, len(saved_models_names)-1 )
+                                model_idx = np.clip(int(inp), 0, len(saved_models_names)-1)
                             except:
                                 pass
 
@@ -108,14 +110,14 @@ class ModelBase(object):
                                         if len(saved_models_names) != 0:
 
                                             if is_rename:
-                                                name = io.input_str(f"Enter the name of the model you want to rename")
+                                                name = io.input_str(f"输入你想重命名的模型名称")
                                             elif is_delete:
-                                                name = io.input_str(f"Enter the name of the model you want to delete")
+                                                name = io.input_str(f"输入你想删除的模型名称")
 
                                             if name in saved_models_names:
 
                                                 if is_rename:
-                                                    new_model_name = io.input_str(f"Enter new name of the model")
+                                                    new_model_name = io.input_str(f"输入模型的新名称")
 
                                                 for filepath in pathex.get_paths(saved_models_path):
                                                     filepath_name = filepath.name
@@ -124,8 +126,8 @@ class ModelBase(object):
                                                     if model_filename == name:
 
                                                         if is_rename:
-                                                            new_filepath = filepath.parent / ( new_model_name + '_' + remain_filename )
-                                                            filepath.rename (new_filepath)
+                                                            new_filepath = filepath.parent / (new_model_name + '_' + remain_filename)
+                                                            filepath.rename(new_filepath)
                                                         elif is_delete:
                                                             filepath.unlink()
                                         continue
@@ -135,171 +137,214 @@ class ModelBase(object):
                                 self.model_name = saved_models_names[model_idx]
 
                     else:
-                        self.model_name = io.input_str(f"No saved models found. Enter a name of a new model", "new")
+                        self.model_name = io.input_str(f"未找到已保存的模型。创建一个新模型，输入名称", "new")
                         self.model_name = self.model_name.replace('_', ' ')
                     break
+
 
 
             self.model_name = self.model_name + '_' + self.model_class_name
         else:
             self.model_name = force_model_class_name
 
-        self.iter = 0
-        self.options = {}
-        self.formatted_dictionary = {}
-        self.options_show_override = {}
-        self.loss_history = []
-        self.sample_for_preview = None
-        self.choosed_gpu_indexes = None
+        self.iter = 0  # 当前迭代次数
+        self.options = {}  # 模型选项
+        self.formatted_dictionary = {}  # 格式化的字典
+        self.options_show_override = {}  # 用于覆盖显示的选项
+        self.loss_history = []  # 损失历史
+        self.sample_for_preview = None  # 预览样本
+        self.choosed_gpu_indexes = None  # 选择的GPU索引
 
         model_data = {}
-        # True if yaml conf file exists 
+        # 如果yaml配置文件存在，则为True
         self.config_file_exists = False
-        # True if user chooses to read options external or internal conf file
+        # 如果用户选择从外部或内部配置文件读取选项，则为True
         self.read_from_conf = False
         config_error = False
-        #check if config_training_file mode is enabled
+
+        # 检查是否启用了config_training_file模式
         if config_training_file is not None:
             if not Path(config_training_file).exists():
-                 io.log_err(f"{config_training_file} does not exists, not using config!")
+                 # 如果配置文件不存在，记录错误信息
+                 io.log_err(f"{config_training_file} 不存在，不使用配置！")
             else:
+                # 设置配置文件路径
                 self.config_file_path = Path(self.get_strpath_def_conf_file())
         elif self.auto_gen_config:
+            # 如果启用了自动生成配置，则设置配置文件路径
              self.config_file_path = Path(self.get_model_conf_path())
 
+        # 如果配置文件路径存在
         if self.config_file_path is not None:
+            # 询问用户是否从文件中读取训练选项
             self.read_from_conf = io.input_bool(
-                f'Do you want to read training options from file?',
+                f'您是否从文件中读取训练选项？',
                 True,
-                'Read options from configuration file instead of asking one by one each option'
+                '从配置文件中读取选项，而不是逐个询问每个选项'
             ) if not silent_start else True
 
-            # If user decides to read from external or internal conf file
+            # 如果用户决定从外部或内部配置文件中读取
             if self.read_from_conf:
-                # Try to read dictionary from external of internal yaml file according
-                # to the value of auto_gen_config
+                # 尝试从外部或内部的yaml文件中读取字典，根据auto_gen_config的值
                 self.options = self.read_from_config_file(self.config_file_path)
-                # If options dict is empty, options will be loaded from dat file
+                # 如果选项字典为空，则选项将从dat文件中加载
                 if self.options is None:
-                    io.log_info(f"Config file validation error, check your config")
+                    io.log_info(f"配置文件验证错误，请检查您的配置")
                     config_error = True
                 elif not self.options.keys():
-                    io.log_info(f"Configuration file doesn't exist. A standard configuration file will be created.")
+                    io.log_info(f"配置文件不存在。将创建标准配置文件。")
                 else:
-                    io.log_info(f"Using config file from {self.config_file_path}")
+                    io.log_info(f"使用来自 {self.config_file_path} 的配置文件")
                     self.config_file_exists = True
 
-        self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
+            
+
+        # 设置模型数据文件的路径
+        self.model_data_path = Path(self.get_strpath_storage_for_file('data.dat'))
+        # 如果模型数据文件存在
         if self.model_data_path.exists():
-            io.log_info (f"Loading {self.model_name} model...")
+            io.log_info (f"加载模型 {self.model_name}...")
+            # 从文件中读取并解析模型数据
             model_data = pickle.loads ( self.model_data_path.read_bytes() )
             self.iter = model_data.get('iter',0)
+            # 如果迭代次数不为0，表示模型非首次运行
             if self.iter != 0:
-                # read options from the .dat file only if the user chooses not to read options from the yaml file
+                # 如果用户选择不从yaml文件读取选项，则从.dat文件中读取选项
                 if not self.config_file_exists:
                     self.options = model_data['options']
+                # 从模型数据中读取损失历史、预览样本和选择的GPU索引
                 self.loss_history = model_data.get('loss_history', [])
                 self.sample_for_preview = model_data.get('sample_for_preview', None)
                 self.choosed_gpu_indexes = model_data.get('choosed_gpu_indexes', None)
 
+        # 如果是模型的首次运行
         if self.is_first_run():
-            io.log_info ("\nModel first run.")
+            io.log_info("\n模型首次运行。")
         else:
+            # 如果处于训练状态且不是静默启动
             if self.is_training and not silent_start:
+                # 询问用户是否要重置迭代计数器和损失图表
                     self.reset_training = io.input_bool(
-                        'Do you want to reset iterations counter and loss graph?',
+                        '您是否要重置迭代计数器和损失图表？',
                         False,
-                        "It resets model iterations counter and loss graph, but your model won't lose training progress. "
-                        "Useful if you reuse always the same model for multiple fakes"
+                        "重置模型的迭代计数器和损失图表，但您的模型不会失去训练进度。"
+                        "如果您总是使用同一个模型进行多次训练，这会很有用。"
                     )
+                                          
                     if self.reset_training:
                         self.set_iter(0)
 
+        # 如果是静默启动
         if silent_start:
+            # 设置设备配置
             if force_gpu_idxs is not None:
                 self.device_config = nn.DeviceConfig.GPUIndexes(force_gpu_idxs) if not cpu_only else nn.DeviceConfig.CPU()
-                io.log_info (f"Silent start: choosed device{'s' if len(force_gpu_idxs) > 0 else ''} {'CPU' if self.device_config.cpu_only else [device.name for device in self.device_config.devices]}")
+                io.log_info (f"静默启动：选择的设备{'s' if len(force_gpu_idxs) > 0 else ''} {'CPU' if self.device_config.cpu_only else [device.name for device in self.device_config.devices]}")
             else:
                 self.device_config = nn.DeviceConfig.BestGPU()
-                io.log_info (f"Silent start: choosed device {'CPU' if self.device_config.cpu_only else self.device_config.devices[0].name}")
+                io.log_info (f"静默启动：选择的设备{'CPU' if self.device_config.cpu_only else self.device_config.devices[0].name}")
         else:
-            self.device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_best_multi_gpu=True)) \
+            # 在非静默启动下设置设备配置
+            self.device_config = nn.DeviceConfig.GPUIndexes(force_gpu_idxs or nn.ask_choose_device_idxs(suggest_best_multi_gpu=True)) \
                                 if not cpu_only else nn.DeviceConfig.CPU()
 
+        # 初始化神经网络
         nn.initialize(self.device_config)
 
+
         ####
+        # 设置默认选项文件的路径
         self.default_options_path = saved_models_path / f'{self.model_class_name}_default_options.dat'
         self.default_options = {}
+        # 如果默认选项文件存在
         if self.default_options_path.exists():
             try:
+                # 从文件中读取并解析默认选项
                 self.default_options = pickle.loads ( self.default_options_path.read_bytes() )
             except:
                 pass
 
+        # 初始化预览历史选择和批处理大小
         self.choose_preview_history = False
         self.batch_size = self.load_or_def_option('batch_size', 1)
         #####
 
+        # 跳过所有挂起的输入
         io.input_skip_pending()
+        # 初始化选项
         self.on_initialize_options()
 
+        # 如果是模型的首次运行
         if self.is_first_run():
-            # save as default options only for first run model initialize
+            # 只在首次运行模型时将当前选项保存为默认选项
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
 
-        # save config file
+        # 保存配置文件
         if self.read_from_conf and not self.config_file_exists and not config_error and not self.config_file_path is None:
             self.save_config_file(self.config_file_path)
 
+        # 从选项中获取各种配置参数
         self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
         self.maximum_n_backups = self.options.get('maximum_n_backups', 24)
         self.write_preview_history = self.options.get('write_preview_history', False)
-        self.target_iter = self.options.get('target_iter',0)
-        self.random_flip = self.options.get('random_flip',True)
+        self.target_iter = self.options.get('target_iter', 0)
+        self.random_flip = self.options.get('random_flip', True)
         self.random_src_flip = self.options.get('random_src_flip', False)
         self.random_dst_flip = self.options.get('random_dst_flip', True)
         self.retraining_samples = self.options.get('retraining_samples', False)
-        
+
+        # 完成初始化
         self.on_initialize()
+        # 更新选项中的批处理大小
         self.options['batch_size'] = self.batch_size
 
-        self.preview_history_writer = None
-        if self.is_training:
-            self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
-            self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}_autobackups' )
 
+        self.preview_history_writer = None
+        # 如果处于训练状态
+        if self.is_training:
+            # 设置预览历史和自动备份的路径
+            self.preview_history_path = self.saved_models_path / (f'{self.get_model_name()}_history')
+            self.autobackups_path = self.saved_models_path / (f'{self.get_model_name()}_autobackups')
+
+            # 如果启用了写入预览历史或在Colab环境中
             if self.write_preview_history or io.is_colab():
                 if not self.preview_history_path.exists():
                     self.preview_history_path.mkdir(exist_ok=True)
                 else:
+                    # 如果迭代次数为0，清理预览历史文件夹
                     if self.iter == 0:
                         for filename in pathex.get_image_paths(self.preview_history_path):
                             Path(filename).unlink()
 
+            # 检查是否设置了训练数据生成器
             if self.generator_list is None:
-                raise ValueError( 'You didnt set_training_data_generators()')
+                raise ValueError('You didnt set_training_data_generators()')
             else:
                 for i, generator in enumerate(self.generator_list):
                     if not isinstance(generator, SampleGeneratorBase):
                         raise ValueError('training data generator is not subclass of SampleGeneratorBase')
 
+            # 更新预览样本
             self.update_sample_for_preview(choose_preview_history=self.choose_preview_history)
 
+            # 如果设置了自动备份时间
             if self.autobackup_hour != 0:
                 self.autobackup_start_time = time.time()
 
                 if not self.autobackups_path.exists():
                     self.autobackups_path.mkdir(exist_ok=True)
 
+		# 打印训练摘要
         io.log_info( self.get_summary_text(reduce_clutter=reduce_clutter) )
 
     def update_sample_for_preview(self, choose_preview_history=False, force_new=False):
+		# 更新预览样本
         if self.sample_for_preview is None or choose_preview_history or force_new:
+			# 如果选择了预览历史并且在Windows环境中
             if choose_preview_history and io.is_support_windows():
                 wnd_name = "[p] - next. [space] - switch preview type. [enter] - confirm."
-                io.log_info (f"Choose image for the preview history. {wnd_name}")
+                io.log_info (f"选择预览图演变的图片. {wnd_name}")
                 io.named_window(wnd_name)
                 io.capture_keys(wnd_name)
                 choosed = False
@@ -333,6 +378,7 @@ class ModelBase(object):
 
                 io.destroy_window(wnd_name)
             else:
+				# 生成下一个样本作为预览
                 self.sample_for_preview = self.generate_next_samples()
 
         try:
@@ -343,6 +389,7 @@ class ModelBase(object):
         self.last_sample = self.sample_for_preview
 
     def load_or_def_option(self, name, def_value):
+        # 从options中加载指定名称的值，如果不存在则尝试从default_options中加载，最后使用默认值
         options_val = self.options.get(name, None)
         if options_val is not None:
             return options_val
@@ -354,6 +401,7 @@ class ModelBase(object):
         return def_value
 
     def load_inter_dims(self):
+        # 尝试从options中加载inter_dims值，如果不存在则返回False
         try:
             v = self.options['inter_dims']
         except KeyError:
@@ -361,51 +409,70 @@ class ModelBase(object):
         return v
 
     def ask_override(self):
+        # 设置延迟时间，如果在Colab环境中为5秒，否则为2秒
         time_delay = 5 if io.is_colab() else 2
-        return self.is_training and not self.is_first_run() and io.input_in_time (f"Press enter in {time_delay} seconds to override model settings.", time_delay )
+        # 如果处于训练状态且不是首次运行，询问用户是否覆盖模型设置
+        return self.is_training and not self.is_first_run() and io.input_in_time(f"在{time_delay}秒内按Enter键修改模型设置。", time_delay)
 
     def ask_session_name(self, default_value=""):
+        # 加载session_name选项，如果不存在则使用默认值
         default_session_name = self.options['session_name'] = self.load_or_def_option('session_name', default_value)
-        self.options['session_name'] = io.input_str("Session name", default_session_name, help_message="String to refer back to in summary.txt and in autobackup foldername")
+        # 询问用户输入session名
+        self.options['session_name'] = io.input_str("会话名称 Session_name", default_session_name, help_message="用于在summary.txt和autobackup文件夹名中引用的字符串")
 
     def ask_autobackup_hour(self, default_value=0):
+        # 加载autobackup_hour选项，如果不存在则使用默认值
         default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', default_value)
-        self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup is the last folder when sorted by name ascending located in model/<>_autobackups")
+        # 询问用户输入自动备份的时间间隔
+        self.options['autobackup_hour'] = io.input_int(f"每N小时自动备份 Autobackup_hour", default_autobackup_hour, add_info="0..24", help_message="每N小时自动备份模型文件和预览图。最新的备份是按名称升序排列时位于model/<>_autobackups的最后一个文件夹")
 
     def ask_maximum_n_backups(self, default_value=24):
+        # 加载maximum_n_backups选项，如果不存在则使用默认值
         default_maximum_n_backups = self.options['maximum_n_backups'] = self.load_or_def_option('maximum_n_backups', default_value)
-        self.options['maximum_n_backups'] = io.input_int(f"Maximum N backups", default_maximum_n_backups, help_message="Maximum amount of backups that are located in model/<>_autobackups. Inputting 0 here would allow it to autobackup as many times as it occurs.")
+        # 询问用户输入最大备份数量
+        self.options['maximum_n_backups'] = io.input_int(f"最大备份数量 Maximum_n_backups", default_maximum_n_backups, help_message="位于model/<>_autobackups中的最大备份数量。输入0将允许它根据发生次数进行任意次数的自动备份。")
 
     def ask_write_preview_history(self, default_value=False):
+        # 加载write_preview_history选项，如果不存在则使用默认值
         default_write_preview_history = self.load_or_def_option('write_preview_history', default_value)
-        self.options['write_preview_history'] = io.input_bool(f"Write preview history", default_write_preview_history, help_message="Preview history will be written to <ModelName>_history folder.")
+        # 询问用户是否写入预览历史
+        self.options['write_preview_history'] = io.input_bool(f"记录预览图演变史 Write_preview_history", default_write_preview_history, help_message="预览图演变史将被写入<ModelName>_history文件夹。")
 
         if self.options['write_preview_history']:
             if io.is_support_windows():
-                self.choose_preview_history = io.input_bool("Choose image for the preview history", False)
+                self.choose_preview_history = io.input_bool("选择要记录预览的图片序号", False)
             elif io.is_colab():
-                self.choose_preview_history = io.input_bool("Randomly choose new image for preview history", False, help_message="Preview image history will stay stuck with old faces if you reuse the same model on different celebs. Choose no unless you are changing src/dst to a new person")
+                self.choose_preview_history = io.input_bool("随机选择要记录预览的图片序号", False, help_message="如果你在不同的人物上重用同一个模型，预览图演变史将记录旧脸。除非您要将源src/目标dst更改为新的人物，否则请选择否")
 
     def ask_target_iter(self, default_value=0):
+        # 加载target_iter选项，如果不存在则使用默认值
         default_target_iter = self.load_or_def_option('target_iter', default_value)
-        self.options['target_iter'] = max(0, io.input_int("Target iteration", default_target_iter))
+        # 询问用户输入目标迭代次数
+        self.options['target_iter'] = max(0, io.input_int("目标迭代次数 Target_iter", default_target_iter))
 
     def ask_random_flip(self):
+        # 加载random_flip选项，如果不存在则使用默认值
         default_random_flip = self.load_or_def_option('random_flip', True)
-        self.options['random_flip'] = io.input_bool("Flip faces randomly", default_random_flip, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
-    
+        # 询问用户是否随机翻转脸部
+        self.options['random_flip'] = io.input_bool("随机翻转脸部 Random_flip", default_random_flip, help_message="预测的脸部看起来更自然，但src脸部集应覆盖所有与dst脸部集相同的方向。")
+
     def ask_random_src_flip(self):
+        # 加载random_src_flip选项，如果不存在则使用默认值
         default_random_src_flip = self.load_or_def_option('random_src_flip', False)
-        self.options['random_src_flip'] = io.input_bool("Flip SRC faces randomly", default_random_src_flip, help_message="Random horizontal flip SRC faceset. Covers more angles, but the face may look less naturally.")
+        # 询问用户是否随机翻转SRC脸部
+        self.options['random_src_flip'] = io.input_bool("随机翻转SRC脸部 Random_src_flip", default_random_src_flip, help_message="随机水平翻转SRC脸部集。覆盖更多角度，但脸部可能看起来不太自然。")
 
     def ask_random_dst_flip(self):
+        # 加载random_dst_flip选项，如果不存在则使用默认值
         default_random_dst_flip = self.load_or_def_option('random_dst_flip', True)
-        self.options['random_dst_flip'] = io.input_bool("Flip DST faces randomly", default_random_dst_flip, help_message="Random horizontal flip DST faceset. Makes generalization of src->dst better, if src random flip is not enabled.")
+        # 询问用户是否随机翻转DST脸部
+        self.options['random_dst_flip'] = io.input_bool("随机翻转DST脸部 Random_dst_flip", default_random_dst_flip, help_message="随机水平翻转DST脸部集。如果src随机翻转未启用，则使src->dst的泛化更好。")
 
     def ask_batch_size(self, suggest_batch_size=None, range=None):
+        # 加载batch_size选项，如果不存在则使用建议值或当前批处理大小
         default_batch_size = self.load_or_def_option('batch_size', suggest_batch_size or self.batch_size)
-
-        batch_size = max(0, io.input_int("Batch_size", default_batch_size, valid_range=range, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+        # 询问用户输入批处理大小
+        batch_size = max(0, io.input_int("批处理大小 Batch_size", default_batch_size, valid_range=range, help_message="更大的批处理大小有助于神经网络的泛化，但可能导致内存溢出错误。请手动调整以适应您的显卡。"))
 
         if range is not None:
             batch_size = np.clip(batch_size, range[0], range[1])
@@ -413,97 +480,110 @@ class ModelBase(object):
         self.options['batch_size'] = self.batch_size = batch_size
 
     def ask_retraining_samples(self, default_value=False):
+        # 加载retraining_samples选项，如果不存在则使用默认值
         default_retraining_samples = self.load_or_def_option('retraining_samples', default_value)
-        self.options['retraining_samples'] = io.input_bool("Retrain high loss samples", default_retraining_samples, help_message="Periodically retrains last 16 \"high-loss\" sample")
+        # 询问用户是否重新训练高损失样本
+        self.options['retraining_samples'] = io.input_bool("重新训练高损失样本 Retraining_samples", default_retraining_samples, help_message="定期重新训练最后16个高损失样本")
 
-
-    #overridable
+    # 可被重写的方法
     def on_initialize_options(self):
         pass
 
-    #overridable
+    # 可被重写的方法
     def on_initialize(self):
         '''
-        initialize your models
+        初始化你的模型
 
-        store and retrieve your model options in self.options['']
+        在self.options['']中存储和检索你的模型选项
 
-        check example
+        参见示例
         '''
         pass
 
-    #overridable
+    # 可被重写的方法
     def onSave(self):
-        #save your models here
+        # 在这里保存你的模型
         pass
 
-    #overridable
+    # 可被重写的方法
     def onTrainOneIter(self, sample, generator_list):
-        #train your models here
+        # 在这里训练你的模型
 
-        #return array of losses
-        return ( ('loss_src', 0), ('loss_dst', 0) )
+        # 返回损失数组
+        return (('loss_src', 0), ('loss_dst', 0))
 
-    #overridable
+    # 可被重写的方法
     def onGetPreview(self, sample, for_history=False, filenames=None):
-        #you can return multiple previews
-        #return [ ('preview_name',preview_rgb), ... ]
+        # 你可以返回多个预览
+        # 返回 [('preview_name', preview_rgb), ...]
         return []
 
-    #overridable if you want model name differs from folder name
+    # 可被重写的方法，如果你希望模型名称与文件夹名称不同
     def get_model_name(self):
         return self.model_name
 
-    #overridable , return [ [model, filename],... ]  list
+    # 可被重写的方法，返回 [[model, filename], ...] 列表
     def get_model_filename_list(self):
         return []
 
-    #overridable
+    # 可被重写的方法
     def get_MergerConfig(self):
-        #return predictor_func, predictor_input_shape, MergerConfig() for the model
+        # 返回模型的predictor_func、predictor_input_shape和MergerConfig()
         raise NotImplementedError
 
-    #overridable
+    # 可被重写的方法
     def get_config_schema_path(self):
         raise NotImplementedError
 
-    #overridable
+    # 可被重写的方法
     def get_formatted_configuration_path(self):
         return "None"
         #raise NotImplementedError
 
+
     def get_pretraining_data_path(self):
+        # 返回预训练数据的路径
         return self.pretraining_data_path
 
     def get_target_iter(self):
+        # 返回目标迭代次数
         return self.target_iter
 
     def is_reached_iter_goal(self):
+        # 检查是否达到了目标迭代次数
         return self.target_iter != 0 and self.iter >= self.target_iter
 
     def get_previews(self):
-        return self.onGetPreview ( self.last_sample, filenames=self.last_sample_filenames )
-    
+        # 获取预览图像
+        return self.onGetPreview(self.last_sample, filenames=self.last_sample_filenames)
+
     def get_static_previews(self):
-        return self.onGetPreview (self.sample_for_preview)
+        # 获取静态预览图像
+        return self.onGetPreview(self.sample_for_preview)
 
     def get_history_previews(self):
-        return self.onGetPreview (self.sample_for_preview, for_history=True)
+        # 获取历史预览图像
+        return self.onGetPreview(self.sample_for_preview, for_history=True)
 
     def get_preview_history_writer(self):
+        # 获取或创建预览历史写入器
         if self.preview_history_writer is None:
             self.preview_history_writer = PreviewHistoryWriter()
         return self.preview_history_writer
 
     def save(self):
+        # 保存模型摘要
         Path( self.get_summary_path() ).write_text( self.get_summary_text(), encoding='utf-8' )
 
+        # 调用保存模型的函数
         self.onSave()
 
+        # 如果启用了自动生成配置
         if self.auto_gen_config:
             path = Path(self.get_model_conf_path())
             self.save_config_file(path)
 
+        # 准备保存的模型数据
         model_data = {
             'iter': self.iter,
             'options': self.options,
@@ -512,30 +592,33 @@ class ModelBase(object):
             'choosed_gpu_indexes' : self.choosed_gpu_indexes,
         }
 
-        # Create a temporary file path
+        # 创建临时文件路径
         temp_model_data_path = Path(self.model_data_path).with_suffix('.tmp')
 
-        # Write the serialized model data to the temporary file
+        # 将序列化的模型数据写入临时文件
         with open(temp_model_data_path, 'wb') as f:
             pickle.dump(model_data, f)
 
-        # Use write_bytes_safe to move the temp file to the final destination
+        # 使用write_bytes_safe将临时文件移动到最终目的地
         pathex.write_bytes_safe(Path(self.model_data_path), temp_model_data_path)
 
+        # 如果设置了自动备份时间
         if self.autobackup_hour != 0:
-            diff_hour = int ( (time.time() - self.autobackup_start_time) // 3600 )
+            diff_hour = int((time.time() - self.autobackup_start_time) // 3600)
 
             if diff_hour > 0 and diff_hour % self.autobackup_hour == 0:
-                self.autobackup_start_time += self.autobackup_hour*3600
+                self.autobackup_start_time += self.autobackup_hour * 3600
                 self.create_backup()
 
     def __convert_type_write(self, value):
+        # 转换数据类型以便写入
         if isinstance(value, (np.int32, np.float64, np.int64)):
             return value.item()
         else:
             return value
 
     def __update_nested_dict(self, nested_dict, key, val):
+        # 更新嵌套字典中的键值
         if key in nested_dict:
             nested_dict[key] = self.__convert_type_write(val)
             return True
@@ -546,30 +629,32 @@ class ModelBase(object):
         return False
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
+        # 迭代读取嵌套字典
         if new_dict is None:
             new_dict = {}
-        for k,v in nested_dict.items():
+        for k, v in nested_dict.items():
             if isinstance(v, dict):
                 new_dict.update(self.__iterate_read_dict(v, new_dict))
             else:            
                 new_dict[k] = v
         return new_dict
 
+
     def read_from_config_file(self, filepath, keep_nested=False, validation=True):
         """
-        Reads options from configuration yaml file.
+        从配置yaml文件中读取选项。
 
-        Args:
-            filepath (str|Path): Path where to read configuration file.
-            keep_nested (bool, optional): If false dictionary is keep nested, otherwise not. Defaults to False.
-            validation (bool, optional): If true dictionary is valideted. Defaults to True.
+        参数:
+            filepath (str|Path): 读取配置文件的路径。
+            keep_nested (bool, optional): 如果为false，则保持字典嵌套，否则不保持。默认为False。
+            validation (bool, optional): 如果为true，则验证字典。默认为True。
 
-        Returns:
-            [dict]: A dictionary of options.
+        返回:
+            [dict]: optional 字典。
         """
-        #fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
         data = {}
         try:
+            # 打开文件并读取数据
             with open(filepath, 'r') as file, open(self.get_config_schema_path(), 'r') as schema:
                 data = yaml.safe_load(file)
                 if not keep_nested:
@@ -586,33 +671,36 @@ class ModelBase(object):
 
     def save_config_file(self, filepath):
         """
-        Saves options to configuration yaml file
+        将选项保存到配置yaml文件
 
-        Args:
-            filepath (str|Path): Path where to save configuration file.
+        参数:
+            filepath (str|Path): 保存配置文件的路径。
         """
         formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path(), keep_nested=True, validation=False)
 
+        # 更新字典并保存
         for key, value in self.options.items():
             if not self.__update_nested_dict(formatted_dict, key, value):
-                print(f"'{key}' not saved in the configuration file")
+                print(f"'{key}' 未在配置文件中保存")
 
         try:
             with open(filepath, 'w') as file:
                 yaml.dump(formatted_dict, file, sort_keys=False)
         except OSError as exception:
-            io.log_info('Impossible to write YAML configuration file -> ', exception)
+            io.log_info('无法写入YAML配置文件 -> ', exception)
 
     def create_backup(self):
-        io.log_info ("Creating backup...", end='\r')
+        io.log_info("正在创建备份...", end='\r')
 
+        # 确保备份路径存在
         if not self.autobackups_path.exists():
             self.autobackups_path.mkdir(exist_ok=True)
 
-        bckp_filename_list = [ self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list() ]
-        bckp_filename_list += [ str(self.get_summary_path()), str(self.model_data_path) ]
+        # 准备备份文件列表
+        bckp_filename_list = [self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list()]
+        bckp_filename_list += [str(self.get_summary_path()), str(self.model_data_path)]
 
-        # Create new backup
+        # 创建新备份
         session_suffix = f'_{self.session_name}' if self.session_name else ''
         idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S') + session_suffix
         idx_backup_path = self.autobackups_path / idx_str
@@ -620,9 +708,8 @@ class ModelBase(object):
         for filename in bckp_filename_list:
             shutil.copy(str(filename), str(idx_backup_path / Path(filename).name))\
 
+        # 生成预览图并保存在新备份中
         previews = self.get_previews()
-
-        # Generate previews and save in new backup
         plist = []
         for i in range(len(previews)):
             name, bgr = previews[i]
@@ -631,7 +718,7 @@ class ModelBase(object):
         if len(plist) != 0:
             self.get_preview_history_writer().post(plist, self.loss_history, self.iter)
 
-        # Check if we've exceeded the max number of backups
+        # 检查是否超出了最大备份数量
         if self.maximum_n_backups != 0:
             all_backups = sorted([x for x in self.autobackups_path.iterdir() if x.is_dir()])
             while len(all_backups) > self.maximum_n_backups:
@@ -639,7 +726,9 @@ class ModelBase(object):
                 pathex.delete_all_files(oldest_backup)
                 oldest_backup.rmdir()
 
+
     def debug_one_iter(self):
+        # 调试一次迭代，将生成的图像堆叠成一个方形图像
         images = []
         for generator in self.generator_list:
             for i,batch in enumerate(next(generator)):
@@ -649,6 +738,7 @@ class ModelBase(object):
         return imagelib.equalize_and_stack_square (images)
 
     def generate_next_samples(self):
+        # 生成下一批样本
         sample = []
         sample_filenames = []
         for generator in self.generator_list:
@@ -665,21 +755,24 @@ class ModelBase(object):
         self.last_sample_filenames = sample_filenames
         return sample
 
-    #overridable
+    # 可被重写的方法
     def should_save_preview_history(self):
+        # 判断是否应该保存预览历史
         return (not io.is_colab() and self.iter % 10 == 0) or (io.is_colab() and self.iter % 100 == 0)
 
     def train_one_iter(self):
-
+        # 训练一次迭代
         iter_time = time.time()
         losses = self.onTrainOneIter()
         iter_time = time.time() - iter_time
 
-        self.loss_history.append ( [float(loss[1]) for loss in losses] )
+        self.loss_history.append([float(loss[1]) for loss in losses])
 
+        # 如果需要保存预览历史
         if self.should_save_preview_history():
             plist = []
 
+            # 在Colab环境下处理
             if io.is_colab():
                 previews = self.get_previews()
                 for i in range(len(previews)):
@@ -703,65 +796,85 @@ class ModelBase(object):
         return self.iter, iter_time
 
     def pass_one_iter(self):
+        # 执行一次迭代
         self.generate_next_samples()
 
     def finalize(self):
+        # 结束训练会话
         nn.close_session()
 
     def is_first_run(self):
+        # 判断是否是首次运行
         return self.iter == 0 and not self.reset_training
 
     def is_debug(self):
+        # 判断是否处于调试模式
         return self.debug
 
     def set_batch_size(self, batch_size):
+        # 设置批处理大小
         self.batch_size = batch_size
 
     def get_batch_size(self):
+        # 获取批处理大小
         return self.batch_size
 
     def get_iter(self):
+        # 获取当前迭代次数
         return self.iter
 
     def set_iter(self, iter):
+        # 设置迭代次数并更新损失历史
         self.iter = iter
         self.loss_history = self.loss_history[:iter]
 
     def get_loss_history(self):
+        # 获取损失历史
         return self.loss_history
 
-    def set_training_data_generators (self, generator_list):
+    def set_training_data_generators(self, generator_list):
+        # 设置训练数据生成器
         self.generator_list = generator_list
 
-    def get_training_data_generators (self):
+    def get_training_data_generators(self):
+        # 获取训练数据生成器
         return self.generator_list
 
     def get_model_root_path(self):
+        # 获取模型根路径
         return self.saved_models_path
 
     def get_strpath_storage_for_file(self, filename):
-        return str( self.saved_models_path / ( self.get_model_name() + '_' + filename) )
+        # 获取存储文件的字符串路径
+        return str(self.saved_models_path / (self.get_model_name() + '_' + filename))
 
     def get_strpath_configuration_path(self):
+        # 获取配置文件的字符串路径
         return str(self.config_file_path)
 
+
     def get_strpath_def_conf_file(self):
+        # 获取默认配置文件的路径
         if Path(self.config_training_file).is_file():
             return str(Path(self.config_training_file))
-        elif Path(self.config_training_file).is_dir(): #left for workspace bat backwards compatibility 
+        elif Path(self.config_training_file).is_dir():  # 为了向后兼容，如果是目录则返回目录下的def_conf_file.yaml
             return str(Path(self.config_training_file) / 'def_conf_file.yaml')
         else: return None
             
     def get_summary_path(self):
+        # 获取摘要文件的路径
         return self.get_strpath_storage_for_file('summary.txt')
 
     def get_model_conf_path(self):
+        # 获取模型配置文件的路径
         return self.get_strpath_storage_for_file('configuration_file.yaml')
 
     def get_summary_text(self, reduce_clutter=False):
+        # 生成模型超参数的文本摘要
         visible_options = self.options.copy()
         visible_options.update(self.options_show_override)
 
+        # 处理random_shadow_src和random_shadow_dst选项
         if all(any(i in j for j in visible_options.keys()) for i in ['random_shadow_src', 'random_shadow_dst']):
             if isinstance(visible_options['random_shadow_src'], list):
                 for opt in visible_options['random_shadow_src']:
@@ -775,57 +888,61 @@ class ModelBase(object):
                         visible_options['random_shadow_dst'] = opt['enabled']
                         break
 
-        ###Generate text summary of model hyperparameters
-        #Find the longest key name and value string. Used as column widths.
-        width_name = max([len(k) for k in visible_options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
-        width_value = max([len(str(x)) for x in visible_options.values()] + [len(str(self.get_iter())), len(self.get_model_name())]) + 1 # Single space buffer to right edge
-        if len(self.device_config.devices) != 0: #Check length of GPU names
+        # 根据选项的键名和值的长度，计算列宽
+        width_name = max([len(k) for k in visible_options.keys()] + [17]) + 1  # 至少为17，即"Current iteration"的长度
+        width_value = max([len(str(x)) for x in visible_options.values()] + [len(str(self.get_iter())), len(self.get_model_name())]) + 1
+        if len(self.device_config.devices) != 0:
             width_value = max([len(device.name)+1 for device in self.device_config.devices] + [width_value])
-        width_total = width_name + width_value + 2 #Plus 2 for ": "
+        width_total = width_name + width_value + 2  # 加2是为了包含": "
 
+        # 构造摘要文本
         summary_text = []
-        summary_text += [f'=={" Model Summary ":=^{width_total}}=='] # Model/status summary
+        summary_text += [f'=={" Model Summary ":=^{width_total}}==']
         summary_text += [f'=={" "*width_total}==']
-        summary_text += [f'=={"Model name": >{width_name}}: {self.get_model_name(): <{width_value}}=='] # Name
+        summary_text += [f'=={"Model name": >{width_name}}: {self.get_model_name(): <{width_value}}==']
         summary_text += [f'=={" "*width_total}==']
-        summary_text += [f'=={"Current iteration": >{width_name}}: {str(self.get_iter()): <{width_value}}=='] # Iter
+        summary_text += [f'=={"Current iteration": >{width_name}}: {str(self.get_iter()): <{width_value}}==']
         summary_text += [f'=={" "*width_total}==']
 
-        summary_text += [f'=={" Model Options ":-^{width_total}}=='] # Model options
+        summary_text += [f'=={" Model Options ":-^{width_total}}==']
         summary_text += [f'=={" "*width_total}==']
         for key in visible_options.keys():
             if reduce_clutter:
                 if str(visible_options[key]) not in ['none', 'n', 'False']:
-                    summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=='] # visible_options key/value pairs
+                    summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}==']
             else:
-                summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=='] # visible_options key/value pairs
+                summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}==']
         summary_text += [f'=={" "*width_total}==']
 
-        summary_text += [f'=={" Running On ":-^{width_total}}=='] # Training hardware info
+        summary_text += [f'=={" Running On ":-^{width_total}}==']
         summary_text += [f'=={" "*width_total}==']
         if len(self.device_config.devices) == 0:
-            summary_text += [f'=={"Using device": >{width_name}}: {"CPU": <{width_value}}=='] # cpu_only
+            summary_text += [f'=={"Using device": >{width_name}}: {"CPU": <{width_value}}==']
         else:
             for device in self.device_config.devices:
-                summary_text += [f'=={"Device index": >{width_name}}: {device.index: <{width_value}}=='] # GPU hardware device index
-                summary_text += [f'=={"Name": >{width_name}}: {device.name: <{width_value}}=='] # GPU name
-                vram_str = f'{device.total_mem_gb:.2f}GB' # GPU VRAM - Formated as #.## (or ##.##)
+                summary_text += [f'=={"Device index": >{width_name}}: {device.index: <{width_value}}==']
+                summary_text += [f'=={"Name": >{width_name}}: {device.name: <{width_value}}==']
+                vram_str = f'{device.total_mem_gb:.2f}GB'
                 summary_text += [f'=={"VRAM": >{width_name}}: {vram_str: <{width_value}}==']
         summary_text += [f'=={" "*width_total}==']
         summary_text += [f'=={"="*width_total}==']
-        summary_text = "\n".join (summary_text)
+        summary_text = "\n".join(summary_text)
         return summary_text
+
 
     @staticmethod
     def get_loss_history_preview(loss_history, iter, w, c, lh_height=100):
-        loss_history = np.array (loss_history.copy())
+        # 将损失历史转换为NumPy数组
+        loss_history = np.array(loss_history.copy())
 
-        lh_img = np.ones ( (lh_height,w,c) ) * 0.1
+        # 创建损失历史图像
+        lh_img = np.ones((lh_height, w, c)) * 0.1
 
         if len(loss_history) != 0:
             loss_count = len(loss_history[0])
             lh_len = len(loss_history)
 
+            # 计算每一列的损失
             l_per_col = lh_len / w
             plist_max = [   [   max (0.0, loss_history[int(col*l_per_col)][p],
                                                 *[  loss_history[i_ab][p]
@@ -847,69 +964,81 @@ class ModelBase(object):
                             for col in range(w)
                         ]
 
-            plist_abs_max = np.mean(loss_history[ len(loss_history) // 5 : ]) * 2
+            # 计算最大的损失值，用于归一化
+            plist_abs_max = np.mean(loss_history[len(loss_history) // 5:]) * 2
 
             for col in range(0, w):
-                for p in range(0,loss_count):
-                    point_color = [1.0]*c
-                    point_color[0:3] = colorsys.hsv_to_rgb ( p * (1.0/loss_count), 1.0, 1.0 )
+                for p in range(0, loss_count):
+                    # 设置点的颜色
+                    point_color = [1.0] * c
+                    point_color[0:3] = colorsys.hsv_to_rgb(p * (1.0 / loss_count), 1.0, 1.0)
 
-                    ph_max = int ( (plist_max[col][p] / plist_abs_max) * (lh_height-1) )
-                    ph_max = np.clip( ph_max, 0, lh_height-1 )
+                    # 计算点的位置并绘制到图像上
+                    ph_max = int((plist_max[col][p] / plist_abs_max) * (lh_height - 1))
+                    ph_max = np.clip(ph_max, 0, lh_height - 1)
 
-                    ph_min = int ( (plist_min[col][p] / plist_abs_max) * (lh_height-1) )
-                    ph_min = np.clip( ph_min, 0, lh_height-1 )
+                    ph_min = int((plist_min[col][p] / plist_abs_max) * (lh_height - 1))
+                    ph_min = np.clip(ph_min, 0, lh_height - 1)
 
-                    for ph in range(ph_min, ph_max+1):
-                        lh_img[ (lh_height-ph-1), col ] = point_color
+                    for ph in range(ph_min, ph_max + 1):
+                        lh_img[(lh_height - ph - 1), col] = point_color
 
+        # 绘制分割线
         lh_lines = 5
-        lh_line_height = (lh_height-1)/lh_lines
-        for i in range(0,lh_lines+1):
-            lh_img[ int(i*lh_line_height), : ] = (0.8,)*c
+        lh_line_height = (lh_height - 1) / lh_lines
+        for i in range(0, lh_lines + 1):
+            lh_img[int(i * lh_line_height), :] = (0.8,) * c
 
-        last_line_t = int((lh_lines-1)*lh_line_height)
-        last_line_b = int(lh_lines*lh_line_height)
-
-        lh_text = 'Iter: %d' % (iter) if iter != 0 else ''
-
-        lh_img[last_line_t:last_line_b, 0:w] += imagelib.get_text_image (  (last_line_b-last_line_t,w,c), lh_text, color=[0.8]*c )
+        # 绘制最后一行文本
+        last_line_t = int((lh_lines - 1) * lh_line_height)
+        last_line_b = int(lh_lines * lh_line_height)
+        lh_text = '迭代: %d' % (iter) if iter != 0 else ''
+        lh_img[last_line_t:last_line_b, 0:w] += imagelib.get_text_image((last_line_b - last_line_t, w, c), lh_text, color=[0.8] * c)
         return lh_img
+
 
 class PreviewHistoryWriter():
     def __init__(self):
+        # 初始化时创建一个多进程队列和一个处理进程
         self.sq = multiprocessing.Queue()
-        self.p = multiprocessing.Process(target=self.process, args=( self.sq, ))
-        self.p.daemon = True
+        self.p = multiprocessing.Process(target=self.process, args=(self.sq,))
+        self.p.daemon = True  # 设置进程为守护进程
         self.p.start()
 
     def process(self, sq):
+        # 处理函数，用于处理队列中的项目
         while True:
             while not sq.empty():
+                # 从队列中获取项目
                 plist, loss_history, iter = sq.get()
 
+                # 缓存预览损失历史图像
                 preview_lh_cache = {}
                 for preview, filepath in plist:
                     filepath = Path(filepath)
                     i = (preview.shape[1], preview.shape[2])
 
+                    # 获取或创建损失历史预览图像
                     preview_lh = preview_lh_cache.get(i, None)
                     if preview_lh is None:
                         preview_lh = ModelBase.get_loss_history_preview(loss_history, iter, preview.shape[1], preview.shape[2])
                         preview_lh_cache[i] = preview_lh
 
-                    img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
-
+                    # 合并并保存图像
+                    img = (np.concatenate([preview_lh, preview], axis=0) * 255).astype(np.uint8)
                     filepath.parent.mkdir(parents=True, exist_ok=True)
-                    cv2_imwrite (filepath, img )
+                    cv2_imwrite(filepath, img)
 
             time.sleep(0.01)
 
     def post(self, plist, loss_history, iter):
-        self.sq.put ( (plist, loss_history, iter) )
+        # 向队列发送项目
+        self.sq.put((plist, loss_history, iter))
 
-    # disable pickling
+    # 禁用序列化
     def __getstate__(self):
         return dict()
+
     def __setstate__(self, d):
         self.__dict__.update(d)
+
