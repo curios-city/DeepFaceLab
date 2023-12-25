@@ -1,4 +1,4 @@
-﻿import math
+import math
 import multiprocessing
 import traceback
 from pathlib import Path
@@ -72,30 +72,30 @@ def main (model_class_name=None,
                                                     place_model_on_cpu=True,
                                                     run_on_cpu=run_on_cpu)
 
-        is_interactive = io.input_bool ("Use interactive merger?", True) if not io.is_colab() else False
+        is_interactive = io.input_bool ("使用交互式合并器吗?", True) if not io.is_colab() else False
 
         if not is_interactive:
             cfg.ask_settings()
             
-        subprocess_count = io.input_int("Number of workers?", max(8, multiprocessing.cpu_count()), 
-                                        valid_range=[1, multiprocessing.cpu_count()], help_message="Specify the number of threads to process. A low value may affect performance. A high value may result in memory error. The value may not be greater than CPU cores." )
+        subprocess_count = io.input_int("工作线程数?", max(8, multiprocessing.cpu_count()), 
+                                        valid_range=[1, multiprocessing.cpu_count()], help_message="指定要处理的线程数。低值可能影响性能。高值可能导致内存错误。该值不能大于CPU核心数" )
 
         input_path_image_paths = pathex.get_image_paths(input_path)
 
         if cfg.type == MergerConfig.TYPE_MASKED:
             if not aligned_path.exists():
-                io.log_err('Aligned directory not found. Please ensure it exists.')
+                io.log_err('未找到对齐的目录。请确保其存在.')
                 return
 
             packed_samples = None
             try:
                 packed_samples = samplelib.PackedFaceset.load(aligned_path, pak_name=pak_name)
             except:
-                io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(aligned_path)}, {traceback.format_exc()}")
+                io.log_err(f"加载 samplelib.PackedFaceset.load {str(aligned_path)}时发生错误, {traceback.format_exc()}")
 
 
             if packed_samples is not None:
-                io.log_info ("Using packed faceset.")
+                io.log_info ("使用打包的人脸集.")
                 def generator():
                     for sample in io.progress_bar_generator( packed_samples, "Collecting alignments"):
                         filepath = Path(sample.filename)
@@ -111,7 +111,7 @@ def main (model_class_name=None,
 
             for filepath, dflimg in generator():
                 if dflimg is None or not dflimg.has_data():
-                    io.log_err (f"{filepath.name} is not a dfl image file")
+                    io.log_err (f"{filepath.name} 不是 dfl 图像文件")
                     continue
 
                 source_filename = dflimg.get_source_filename()
@@ -132,21 +132,21 @@ def main (model_class_name=None,
 
             if multiple_faces_detected:
                 io.log_info ("")
-                io.log_info ("Warning: multiple faces detected. Only one alignment file should refer one source file.")
+                io.log_info ("警告：检测到多个人脸。一个对齐文件应该只引用一个源文件.")
                 io.log_info ("")
 
             for a_key in list(alignments.keys()):
                 a_ar = alignments[a_key]
                 if len(a_ar) > 1:
                     for _, filepath, source_filepath, _ in a_ar:
-                        io.log_info (f"alignment {filepath.name} refers to {source_filepath.name} ")
+                        io.log_info (f"对齐文件 {filepath.name} 参考 {source_filepath.name} ")
                     io.log_info ("")
 
                 alignments[a_key] = [ [a[0], a[3]] for a in a_ar]
 
             if multiple_faces_detected:
-                io.log_info ("It is strongly recommended to process the faces separatelly.")
-                io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
+                io.log_info ("强烈建议分别处理各个人脸.")
+                io.log_info ("使用恢复原始文件名 'recover original filename' 来确定确切的重复项.")
                 io.log_info ("")
 
 
@@ -174,7 +174,7 @@ def main (model_class_name=None,
             #            for p in input_path_image_paths ]
 
             if multiple_faces_detected:
-                io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")
+                io.log_info ("警告：检测到多个人脸.不会使用运动模糊.")
                 io.log_info ("")
             else:
                 s = 256
@@ -209,7 +209,7 @@ def main (model_class_name=None,
 
 
         if len(frames) == 0:
-            io.log_info ("No frames to merge in input_dir.")
+            io.log_info ("输入目录中没有要合并的帧.")
         else:
             if False:
                 pass
@@ -244,7 +244,7 @@ for filepath in io.progress_bar_generator(input_path_image_paths, "Collecting in
 
     dflimg = DFLIMG.x(filepath)
     if dflimg is None:
-        io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        io.log_err ("%s 不是DFL图像文件" % (filepath.name) )
         continue
     filesdata += [ ( FrameInfo(filepath=filepath, landmarks_list=[dflimg.get_landmarks()] ), dflimg.get_source_filename() ) ]
 
