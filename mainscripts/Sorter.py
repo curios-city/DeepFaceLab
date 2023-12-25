@@ -30,7 +30,7 @@ class BlurEstimatorSubprocessor(Subprocessor):
             dflimg = DFLIMG.load (filepath)
 
             if dflimg is None or not dflimg.has_data():
-                self.log_err (f"{filepath.name} is not a dfl image file")
+                self.log_err (f"{filepath.name} 不是DFL图像文件")
                 return [ str(filepath), 0 ]
             else:
                 image = cv2_imread( str(filepath) )
@@ -71,7 +71,7 @@ class BlurEstimatorSubprocessor(Subprocessor):
     #override
     def process_info_generator(self):
         cpu_count = multiprocessing.cpu_count()
-        io.log_info(f'Running on {cpu_count} CPUs')
+        io.log_info(f'运行在 {cpu_count} CPU上')
 
         for i in range(cpu_count):
             yield 'CPU%d' % (i), {}, {'estimate_motion_blur':self.estimate_motion_blur}
@@ -102,23 +102,23 @@ class BlurEstimatorSubprocessor(Subprocessor):
 
 
 def sort_by_blur(input_path, arg):
-    io.log_info (f"Sorting by {arg[Arguments.DESC.value]}...")
+    io.log_info (f"按{arg[Arguments.DESC.value]}排序...")
 
     img_list = [ (filename,[]) for filename in pathex.get_image_paths(input_path) ]
     img_list, trash_img_list = BlurEstimatorSubprocessor (img_list).run()
 
-    io.log_info ("Sorting...")
+    io.log_info ("排序中...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
 
     return img_list, trash_img_list
     
 def sort_by_motion_blur(input_path, arg):
-    io.log_info (f"Sorting by {arg[Arguments.DESC.value]}...")
+    io.log_info (f"按{arg[Arguments.DESC.value]}排序...")
 
     img_list = [ (filename,[]) for filename in pathex.get_image_paths(input_path) ]
     img_list, trash_img_list = BlurEstimatorSubprocessor (img_list, estimate_motion_blur=True).run()
 
-    io.log_info ("Sorting...")
+    io.log_info ("排序中...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
 
     return img_list, trash_img_list
@@ -178,13 +178,13 @@ class HistSsimSubprocessor(Subprocessor):
     #override
     def process_info_generator(self):
         cpu_count = len(self.img_chunks_list)
-        io.log_info(f'Running on {cpu_count} threads')
+        io.log_info(f'正在使用 {cpu_count} 个线程')
         for i in range(cpu_count):
             yield 'CPU%d' % (i), {'i':i}, {}
 
     #override
     def on_clients_initialized(self):
-        io.progress_bar ("Sorting", len(self.img_list))
+        io.progress_bar ("排序中", len(self.img_list))
         io.progress_bar_inc(len(self.img_chunks_list))
 
     #override
@@ -199,7 +199,7 @@ class HistSsimSubprocessor(Subprocessor):
 
     #override
     def on_data_return (self, host_dict, data):
-        raise Exception("Fail to process data. Decrease number of images and try again.")
+        raise Exception("数据处理失败。请减少图像数量并重试.")
 
     #override
     def on_result (self, host_dict, data, result):
@@ -211,7 +211,7 @@ class HistSsimSubprocessor(Subprocessor):
         return self.result
 
 def sort_by_hist(input_path, arg):
-    io.log_info (f"Sorting by {arg[Arguments.DESC.value]}...")
+    io.log_info (f"按照{arg[Arguments.DESC.value]} 进行排序...")
     img_list = HistSsimSubprocessor(pathex.get_image_paths(input_path)).run()
     return img_list, []
 
@@ -256,7 +256,7 @@ class HistDissimSubprocessor(Subprocessor):
     #override
     def process_info_generator(self):
         cpu_count = min(multiprocessing.cpu_count(), 8)
-        io.log_info(f'Running on {cpu_count} CPUs')
+        io.log_info(f'正在使用 {cpu_count} 个CPU运行')
         for i in range(cpu_count):
             yield 'CPU%d' % (i), {}, {'img_list' : self.img_list}
 
@@ -319,7 +319,7 @@ class FinalLoaderSubprocessor(Subprocessor):
                 dflimg = DFLIMG.load (filepath)
 
                 if dflimg is None or not dflimg.has_data():
-                    self.log_err (f"{filepath.name} is not a dfl image file")
+                    self.log_err (f"{filepath.name} 不是DFL图像文件")
                     return [ 1, [str(filepath)] ]
 
                 bgr = cv2_imread(str(filepath))
@@ -369,7 +369,7 @@ class FinalLoaderSubprocessor(Subprocessor):
     #override
     def process_info_generator(self):
         cpu_count = min(multiprocessing.cpu_count(), 8)
-        io.log_info(f'Running on {cpu_count} CPUs')
+        io.log_info(f'正在使用 {cpu_count} 个CPU运行')
 
         for i in range(cpu_count):
             yield 'CPU%d' % (i), {}, {'faster': self.faster}
@@ -435,7 +435,7 @@ class FinalHistDissimSubprocessor(Subprocessor):
     #override
     def process_info_generator(self):
         cpu_count = min(multiprocessing.cpu_count(), 8)
-        io.log_info(f'Running on {cpu_count} CPUs')
+        io.log_info(f'正在使用 {cpu_count} 个CPU运行')
         for i in range(cpu_count):
             yield 'CPU%d' % (i), {}, {}
 
@@ -470,14 +470,14 @@ class FinalHistDissimSubprocessor(Subprocessor):
         return self.result
 
 def sort_best_faster(input_path, arg):
-    io.log_info (f"Sorting by {arg[Arguments.DESC.value]}...")
+    io.log_info (f"按照 {arg[Arguments.DESC.value]}排序...")
     return sort_best(input_path, faster=True)
 
 def sort_best(input_path, faster=False):
-    target_count = io.input_int ("Target number of faces?", 2000)
+    target_count = io.input_int ("目标人脸数?", 2000)
 
     if faster:
-        io.log_info("Using faster algorithm. Faces will be sorted by source-rect-area instead of blur.")
+        io.log_info("使用更快的算法。脸将按源矩形区域而不是模糊度排序.")
 
     img_list, trash_img_list = FinalLoaderSubprocessor( pathex.get_image_paths(input_path), faster ).run()
     final_img_list = []
@@ -489,7 +489,7 @@ def sort_best(input_path, faster=False):
     grads_space = np.linspace (-1.2, 1.2,grads)
 
     yaws_sample_list = [None]*grads
-    for g in io.progress_bar_generator ( range(grads), "Sort by yaw"):
+    for g in io.progress_bar_generator ( range(grads), "侧脸排序中"):
         yaw = grads_space[g]
         next_yaw = grads_space[g+1] if g < grads-1 else yaw
 
@@ -734,7 +734,7 @@ def final_process(input_path, img_list, trash_img_list):
             try:
                 src.rename (dst)
             except:
-                io.log_info ('fail to rename %s' % (src.name) )
+                io.log_info ('重命名失败 %s' % (src.name) )
 
         for i in io.progress_bar_generator( [*range(len(img_list))], "Renaming"):
             src = Path (img_list[i][0])
@@ -743,13 +743,13 @@ def final_process(input_path, img_list, trash_img_list):
             try:
                 src.rename (dst)
             except:
-                io.log_info ('fail to rename %s' % (src.name) )
+                io.log_info ('重命名失败 %s' % (src.name) )
 
 def process_by_face_yaw(filepath):
     path = Path(filepath)
     dflimg = DFLIMG.load(path)
     if dflimg is None or not dflimg.has_data():
-        print(f"{path.name} is not a DFL image file. Trashing it...")
+        print(f"{path.name} 不是 DFL 图像文件。正在将其删除...")
         return str(path), False
         
     _, yaw, _ = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
@@ -759,7 +759,7 @@ def process_by_face_pitch(filepath):
     path = Path(filepath)
     dflimg = DFLIMG.load(path)
     if dflimg is None or not dflimg.has_data():
-        print(f"{path.name} is not a DFL image file. Trashing it...")
+        print(f"{path.name} 不是 DFL 图像文件。正在将其删除...")
         return str(path), False
         
     pitch, _, _ = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
@@ -775,7 +775,7 @@ def process_by_face_source_rect_size(filepath):
     path = Path(filepath)
     dflimg = DFLIMG.load(path)
     if dflimg is None or not dflimg.has_data():
-        print(f"{path.name} is not a DFL image file. Trashing it...")
+        print(f"{path.name} 不是 DFL 图像文件。正在将其删除...")
         return str(path), False
 
     source_rect = dflimg.get_source_rect()
@@ -791,13 +791,13 @@ def process_by_origname(filepath):
     path = Path(filepath)
     dflimg = DFLIMG.load(path)
     if dflimg is None or not dflimg.has_data():
-        print(f"{path.name} is not a DFL image file. Trashing it...")
+        print(f"{path.name} 不是 DFL 图像文件。正在将其删除...")
         return str(path), False
     
     return str(path), dflimg.get_source_filename()
 
 def sort_by_oneface_in_image(input_path, arg):
-    io.log_info (f"Sorting by {arg[Arguments.DESC.value]}...")
+    io.log_info (f"按{arg[Arguments.DESC.value]}排序...")
     image_paths = pathex.get_image_paths(input_path)
     a = np.array ([ ( int(x[0]), int(x[1]) ) \
                       for x in [ Path(filepath).stem.split('_') for filepath in image_paths ] if len(x) == 2
@@ -807,22 +807,22 @@ def sort_by_oneface_in_image(input_path, arg):
         idxs = np.unique ( a[idxs][:,0] )
         idxs = np.ndarray.flatten ( np.argwhere ( np.array([ x[0] in idxs for x in a ]) == True ) )
         if len(idxs) > 0:
-            io.log_info ("Found %d images." % (len(idxs)) )
+            io.log_info ("找到 %d 图片." % (len(idxs)) )
             img_list = [ (path,) for i,path in enumerate(image_paths) if i not in idxs ]
             trash_img_list = [ (image_paths[x],) for x in idxs ]
             return img_list, trash_img_list
 
-    io.log_info ("Nothing found. Possible recover original filenames first.")
+    io.log_info ("未找到任何内容。可能首先恢复原始文件名.")
     return [], []
 
 def sort_starter(input_path, arg):
-    io.log_info (f"Sorting by {arg[Arguments.DESC.value]}...")
+    io.log_info (f"按{arg[Arguments.DESC.value]}排序...")
     img_list = []
     trash_img_list = []
     dataset = [filename for filename in pathex.get_image_paths(input_path)]
 
-    cpus = io.input_int('Insert number of CPUs to use', 
-                    help_message='If the default option is selected it will use all cpu cores and it will slow down pc',
+    cpus = io.input_int('要使用的CPU核心数量', 
+                    help_message='如果选择默认选项，它将使用所有 CPU 内核，并且会减慢计算机的速度',
                     default_value=multiprocessing.cpu_count())
     
     with multiprocessing.Pool(processes=cpus) as p:
@@ -875,14 +875,14 @@ sort_func_methods = {
 }
 
 def main (input_path, sort_by_method=None):
-    io.log_info ("Running sort tool.\r\n")
+    io.log_info ("运行排序工具.\r\n")
 
     if PackedFaceset.path_contains(input_path):
-        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        io.log_info (f'\n{input_path} 包含打包的人脸集！请先解包.\n')
         return
 
     if sort_by_method is None:
-        io.log_info(f"Choose sorting method:")
+        io.log_info(f"选择排序方法:")
 
         key_list = list(sort_func_methods.keys())
         for i, key in enumerate(key_list):
