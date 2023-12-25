@@ -122,7 +122,7 @@ class QSubprocessor(object):
                 raise Exception (f"Unable to start subprocess {name}. Error: {traceback.format_exc()}")
 
         if len(self.clis) == 0:
-            raise Exception ("Unable to start QSubprocessor '%s' " % (self.name))
+            raise Exception ("无法启动 QSubprocessor '%s' " % (self.name))
 
         #waiting subprocesses their success(or not) initialization
         while True:
@@ -145,7 +145,7 @@ class QSubprocessor(object):
             io.process_messages(0.005)
 
         if len(self.clis) == 0:
-            raise Exception ( "Unable to start subprocesses." )
+            raise Exception ( "无法启动子进程。" )
 
         #ok some processes survived, initialize host logic
         self.on_clients_initialized()
@@ -213,7 +213,7 @@ class QSubprocessor(object):
             if cli.state == 1:
                 if cli.sent_time != 0 and self.no_response_time_sec != 0 and (time.time() - cli.sent_time) > self.no_response_time_sec:
                     #subprocess busy too long
-                    io.log_info ( '%s doesnt response, terminating it.' % (cli.name) )
+                    io.log_info ( '%s 没有响应，正在终止它' % (cli.name) )
                     self.on_data_return (cli.host_dict, cli.sent_data )
                     cli.kill()
                     self.clis.remove(cli)
