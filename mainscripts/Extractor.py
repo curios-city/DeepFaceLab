@@ -136,7 +136,7 @@ class ExtractSubprocessor(Subprocessor):
             if self.type == 'all' or 'rects' in self.type or 'landmarks' in self.type:
                 nn.initialize (device_config)
 
-            self.log_info (f"Running on {client_dict['device_name'] }")
+            self.log_info (f"运行在 {client_dict['device_name'] }")
 
             if self.type == 'all' or self.type == 'rects-s3fd' or 'landmarks' in self.type:
                 self.rects_extractor = facelib.S3FDExtractor(place_model_on_cpu=place_model_on_cpu)
@@ -917,16 +917,16 @@ def main(detector=None,
     if not extract_from_video:
         if not manual_output_debug_fix and len(output_images_paths) > 0:
             if len(output_images_paths) > 128:
-                continue_extraction = io.input_bool ("Continue extraction?", True, help_message="Extraction can be continued, but you must specify the same options again.")
+                continue_extraction = io.input_bool ("继续提取?", True, help_message="提取可以继续，但必须再次指定相同的选项.")
 
             if len(output_images_paths) > 128 and continue_extraction:
                 try:
                     input_image_paths = input_image_paths[ [ Path(x).stem for x in input_image_paths ].index ( Path(output_images_paths[-128]).stem.split('_')[0] ) : ]
                 except:
-                    io.log_err("Error in fetching the last index. Extraction cannot be continued.")
+                    io.log_err("获取最后索引时出错。无法继续提取.")
                     return
             elif input_path != output_path:
-                    io.input(f"\n WARNING !!! \n {output_path} contains files! \n They will be deleted. \n Press enter to continue.\n")
+                    io.input(f"\n 警告 !!! \n {output_path} 包含文件! \n 它们将被删除. \n 按 Enter 继续.\n")
                     for filename in output_images_paths:
                         Path(filename).unlink()
 
@@ -934,32 +934,32 @@ def main(detector=None,
                     if not cpu_only else nn.DeviceConfig.CPU()
 
     if face_type is None:
-        face_type = io.input_str ("Face type", 'wf', ['f','wf','head'], help_message="Full face / whole face / head. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
+        face_type = io.input_str ("人脸类型 Face type", 'wf', ['f','wf','head'], help_message="Full face / whole face / head. 全脸/整张脸/头部.整张脸包括整个脸部区域，包括前额.头部包括整个头部，但需要为源和目标人脸集使用XSeg.").lower()
         face_type = {'f'  : FaceType.FULL,
                      'wf' : FaceType.WHOLE_FACE,
                      'head' : FaceType.HEAD}[face_type]
 
     if max_faces_from_image is None:
-        max_faces_from_image = io.input_int(f"Max number of faces from image", 0, help_message="If you extract a src faceset that has frames with a large number of faces, it is advisable to set max faces to 3 to speed up extraction. 0 - unlimited")
+        max_faces_from_image = io.input_int(f"每张图像最大人脸数 Max number of faces from image", 0, help_message="如果你提取的源人脸集包含有大量人脸的帧，建议将最大人脸数设置为 3 以加快提取速度。0 - 无限制。")
 
     if image_size is None:
-        image_size = io.input_int(f"Image size", 512 if face_type < FaceType.HEAD else 768, valid_range=[256,2048], help_message="Output image size. The higher image size, the worse face-enhancer works. Use higher than 512 value only if the source image is sharp enough and the face does not need to be enhanced.")
+        image_size = io.input_int(f"图像大小 Image size", 512 if face_type < FaceType.HEAD else 768, valid_range=[256,2048], help_message="输出图像尺寸。图像尺寸越大，人脸增强效果越差。仅在源图像足够清晰且无需增强人脸时，使用高于 512 的值")
 
     if jpeg_quality is None:
-        jpeg_quality = io.input_int(f"Jpeg quality", 90, valid_range=[1,100], help_message="Jpeg quality. The higher jpeg quality the larger the output file size.")
+        jpeg_quality = io.input_int(f"图像质量 Jpeg quality", 90, valid_range=[1,100], help_message="JPEG 质量。JPEG 质量越高，输出文件大小越大。")
 
     if extract_from_video and fps is None:
-        fps = io.input_int ("Enter FPS", 0, help_message="How many frames of every second of the video will be extracted. 0 - full fps")
+        fps = io.input_int ("每秒提取图片数 Enter FPS", 0, help_message="从视频中提取每秒的帧数。0 - 使用完整的帧率")
 
     if detector is None:
-        io.log_info ("Choose detector type.")
+        io.log_info ("选择检测器类型.")
         io.log_info ("[0] S3FD")
-        io.log_info ("[1] manual")
+        io.log_info ("[1] 手动")
         detector = {0:'s3fd', 1:'manual'}[ io.input_int("", 0, [0,1]) ]
 
 
     if output_debug is None:
-        output_debug = io.input_bool (f"Write debug images to {output_debug_path.name}?", False)
+        output_debug = io.input_bool (f"将调试图像写入 {output_debug_path.name}?", False)
 
     if output_debug:
         output_debug_path.mkdir(parents=True, exist_ok=True)
@@ -967,15 +967,15 @@ def main(detector=None,
     if not extract_from_video:
         if manual_output_debug_fix:
             if not output_debug_path.exists():
-                io.log_err(f'{output_debug_path} not found. Re-extract faces with "Write debug images" option.')
+                io.log_err(f'{output_debug_path} 未找到，请重新提取带有调试图像选项的人脸')
                 return
             else:
                 detector = 'manual'
-                io.log_info('Performing re-extract frames which were deleted from _debug directory.')
+                io.log_info('正在重新提取从 _debug 目录中删除的帧.')
 
                 input_image_paths = DeletedFilesSearcherSubprocessor (input_image_paths, pathex.get_image_paths(output_debug_path) ).run()
                 input_image_paths = sorted (input_image_paths)
-                io.log_info('Found %d images.' % (len(input_image_paths)))
+                io.log_info('发现 %d 张图像.' % (len(input_image_paths)))
         else:
             if not continue_extraction and output_debug_path.exists():
                 for filename in pathex.get_image_paths(output_debug_path):
@@ -988,13 +988,13 @@ def main(detector=None,
         if images_found != 0:
             if detector == 'manual':
                 if not extract_from_video:
-                    io.log_info ('Performing manual extract...')
+                    io.log_info ('执行手动提取...')
                     data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filepath=Path(filename)) for filename in input_image_paths ], 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
 
-                    io.log_info ('Performing 3rd pass...')
+                    io.log_info ('执行第三次处理...')
                     data = ExtractSubprocessor (data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
             else:
-                io.log_info ('Extracting faces...')
+                io.log_info ('提取人脸...')
                 data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filepath=Path(filename)) for filename in input_image_paths ] if not extract_from_video else None,
                                             'all',
                                             image_size,
@@ -1010,15 +1010,15 @@ def main(detector=None,
 
             if manual_fix:
                 if all ( np.array ( [ d.faces_detected > 0 for d in data] ) == True ):
-                    io.log_info ('All faces are detected, manual fix not needed.')
+                    io.log_info ('所有人脸均已检测到，无需手动修复.')
                 else:
                     fix_data = [ ExtractSubprocessor.Data(filepath=d.filepath) for d in data if d.faces_detected == 0 ]
-                    io.log_info ('Performing manual fix for %d images...' % (len(fix_data)) )
+                    io.log_info ('对 %d 张图像执行手动修复...' % (len(fix_data)) )
                     fix_data = ExtractSubprocessor (fix_data, 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
                     fix_data = ExtractSubprocessor (fix_data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
                     faces_detected += sum([d.faces_detected for d in fix_data])
     else:
-        io.log_info ('Extracting faces...')
+        io.log_info ('提取人脸...')
         data = None
         try:
             sub = ExtractSubprocessor (None,
@@ -1042,6 +1042,6 @@ def main(detector=None,
             faces_detected += sum([d.faces_detected for d in data])
 
     io.log_info ('-------------------------')
-    io.log_info (f"Images found:        {images_found if not extract_from_video else 'No frames detected. (You are using extract from video mode)'}")
-    io.log_info (f'Faces detected:      {faces_detected}')
+    io.log_info (f"找到的图像数:        {images_found if not extract_from_video else '未检测到帧. (您正在使用从视频提取模式)'}")
+    io.log_info (f'检测到的人脸数:      {faces_detected}')
     io.log_info ('-------------------------')
