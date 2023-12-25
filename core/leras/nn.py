@@ -69,7 +69,7 @@ class nn():
                     os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
             
             if first_run:
-                io.log_info("Caching GPU kernels...")
+                io.log_info("缓存 GPU 内核...")
 
             import tensorflow
 
@@ -219,9 +219,9 @@ class nn():
 
         io.log_info ("")
         if choose_only_one:
-            io.log_info ("Choose one GPU idx.")
+            io.log_info ("选择一个 GPU 索引.")
         else:
-            io.log_info ("Choose one or several GPU idxs (separated by comma).")
+            io.log_info ("选择一个或多个 GPU 索引（用逗号分隔）.")
         io.log_info ("")
 
         if allow_cpu:
@@ -234,9 +234,9 @@ class nn():
         while True:
             try:
                 if choose_only_one:
-                    choosed_idxs = io.input_str("Which GPU index to choose?", best_device_indexes)
+                    choosed_idxs = io.input_str("选择哪个 GPU 索引?", best_device_indexes)
                 else:
-                    choosed_idxs = io.input_str("Which GPU indexes to choose?", best_device_indexes)
+                    choosed_idxs = io.input_str("选择哪些 GPU 索引?", best_device_indexes)
 
                 if allow_cpu and choosed_idxs.lower() == "cpu":
                     choosed_idxs = []
