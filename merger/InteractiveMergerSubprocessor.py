@@ -60,7 +60,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
 
         #override
         def on_initialize(self, client_dict):
-            self.log_info ('Running on %s.' % (client_dict['device_name']) )
+            self.log_info ('运行在 %s.' % (client_dict['device_name']) )
             self.device_idx  = client_dict['device_idx']
             self.device_name = client_dict['device_name']
             self.predictor_func = client_dict['predictor_func']
@@ -90,7 +90,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                     img_bgr = np.zeros( (h,w,3), dtype=np.uint8)
                     img_mask = np.zeros( (h,w,1), dtype=np.uint8)               
                 else:                
-                    self.log_info (f'no faces found for {filepath.name}, copying without faces')
+                    self.log_info (f'未找到 {filepath.name} 的人脸，复制时不带人脸')
                     img_bgr = cv2_imread(filepath)
                     imagelib.normalize_channels(img_bgr, 3)                    
                     h,w,c = img_bgr.shape
@@ -203,7 +203,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                         break
 
             if frames_equal:
-                io.log_info ('Using saved session from ' + '/'.join (self.merger_session_filepath.parts[-2:]) )
+                io.log_info ('使用保存的会话从' + '/'.join (self.merger_session_filepath.parts[-2:]) )
 
                 for frame in s_frames:
                     if frame.cfg is not None:
@@ -360,7 +360,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
             }
             self.merger_session_filepath.write_bytes( pickle.dumps(session_data) )
 
-            io.log_info ("Session is saved to " + '/'.join (self.merger_session_filepath.parts[-2:]) )
+            io.log_info ("会话已保存至 " + '/'.join (self.merger_session_filepath.parts[-2:]) )
 
     #override
     def on_tick(self):
