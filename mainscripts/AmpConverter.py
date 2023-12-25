@@ -11,7 +11,7 @@ def main(saved_models_path):
         if filepath_name.endswith('AMP_data.dat'):
             saved_models_names.append(filepath_name.split('_')[0])
 
-    io.log_info("Choose one of saved models, to convert the it from AMP to AMPLegacy")
+    io.log_info("选择一个保存的模型，将其从 AMP 转换为 AMPLegacy")
     io.log_info ("")
 
     for i, model_name in enumerate(saved_models_names):
@@ -22,8 +22,8 @@ def main(saved_models_path):
     while True:
         inp = int(inp)
         if inp > len(saved_models_names)-1 or inp < 0:
-            io.log_info(f"Please insert a value between 0 and {len(saved_models_names)-1}")
-            inp = io.input_str(f"Insert a value: ", "0", show_default_value=False )
+            io.log_info(f"请插入一个介于0和{len(saved_models_names)-1}之间的值")
+            inp = io.input_str(f"插入一个值: ", "0", show_default_value=False )
         else:
             break
 
