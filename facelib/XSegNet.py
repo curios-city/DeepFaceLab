@@ -40,7 +40,7 @@ class XSegNet(object):
             self.model_weights = self.model.get_weights()
             if training:
                 if optimizer is None:
-                    raise ValueError("Optimizer should be provided for training mode.")                
+                    raise ValueError("找不到优化器。")                
                 self.opt = optimizer              
                 self.opt.initialize_variables (self.model_weights, vars_on_cpu=place_model_on_cpu)                    
                 self.model_filename_list += [ [self.opt, f'{model_name}_opt.npy' ] ]
@@ -84,7 +84,7 @@ class XSegNet(object):
         return self.model_weights
 
     def save_weights(self):
-        for model, filename in io.progress_bar_generator(self.model_filename_list, "Saving", leave=False):
+        for model, filename in io.progress_bar_generator(self.model_filename_list, "保存中...", leave=False):
             model.save_weights( self.weights_file_root / filename )
 
     def extract (self, input_image):
