@@ -1490,10 +1490,10 @@ def start(input_dirpath):
     """
     returns exit_code
     """
-    io.log_info("Running XSeg editor.")
+    io.log_info("正在运行 XSeg 编辑器.")
 
     if PackedFaceset.path_contains(input_dirpath):
-        io.log_info (f'\n{input_dirpath} contains packed faceset! Unpack it first.\n')
+        io.log_info (f'\n{input_dirpath}  包含打包的人脸集！请先解压.\n')
         return 1
 
     root_path = Path(__file__).parent
