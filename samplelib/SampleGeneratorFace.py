@@ -59,7 +59,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
             grads_space = np.linspace (-1.2, 1.2,grads)
 
             yaws_sample_list = [None]*grads
-            for g in io.progress_bar_generator ( range(grads), "Sort by yaw"):
+            for g in io.progress_bar_generator ( range(grads), "侧脸排序中"):
                 yaw = grads_space[g]
                 next_yaw = grads_space[g+1] if g < grads-1 else yaw
 
