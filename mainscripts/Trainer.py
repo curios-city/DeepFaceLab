@@ -227,7 +227,7 @@ def trainerThread (s2c, c2s, e,
                             io.log_info(
                                 "尝试进行第一次迭代。如果发生错误，请减少模型参数.")
                             if sys.platform[0:3] == 'win':
-                                io.log_info("AIBL论坛提醒您：按下Enter键可停止训练并保存模型.")
+                                io.log_info("按下Enter键可停止训练并保存模型.")
 
                         if gen_snapshot:
                             model.generate_training_state()
