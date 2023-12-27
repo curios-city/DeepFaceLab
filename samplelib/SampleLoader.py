@@ -22,10 +22,10 @@ class SampleLoader:
         try:
             samples = samplelib.PackedFaceset.load(samples_path)
         except:
-            io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_path)}, {traceback.format_exc()}")
+            io.log_err(f"在加载样本库时发生错误 {str(samples_path)}, {traceback.format_exc()}")
 
         if samples is None:
-            raise ValueError("packed faceset not found.")
+            raise ValueError("未找到打包的人脸集")
         persons_name_idxs = {}
         for sample in samples:
             persons_name_idxs[sample.person_name] = 0
@@ -56,10 +56,10 @@ class SampleLoader:
                 try:
                     result = samplelib.PackedFaceset.load(samples_path, pak_name)
                 except:
-                    io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
+                    io.log_err(f"在加载 samplelib.PackedFaceset.load {str(samples_dat_path)}时发生错误, {traceback.format_exc()}")
 
                 if result is not None:
-                    io.log_info (f"Loaded {len(result)} packed faces from {samples_path}")
+                    io.log_info (f"从 {samples_path} 加载了 {len(result)} 个打包的人脸")
 
                 if result is None:
                     result = SampleLoader.load_face_samples( pathex.get_image_paths(samples_path, subdirs=subdirs) )
@@ -115,11 +115,11 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
         self.image_paths_len = len(image_paths)
         self.idxs = [*range(self.image_paths_len)]
         self.result = [None]*self.image_paths_len
-        super().__init__('FaceSamplesLoader', FaceSamplesLoaderSubprocessor.Cli, 60)
+        super().__init__('人脸样本加载', FaceSamplesLoaderSubprocessor.Cli, 60)
 
     #override
     def on_clients_initialized(self):
-        io.progress_bar ("Loading samples", len (self.image_paths))
+        io.progress_bar ("实例加载中", len (self.image_paths))
 
     #override
     def on_clients_finalized(self):
@@ -159,7 +159,7 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
             dflimg = DFLIMG.load (Path(filename))
 
             if dflimg is None or not dflimg.has_data():
-                self.log_err (f"FaceSamplesLoader: {filename} is not a dfl image file.")
+                self.log_err (f"人脸样本加载: {filename} is not a dfl image file.")
                 data = None
             else:
                 data = (dflimg.get_face_type(),
