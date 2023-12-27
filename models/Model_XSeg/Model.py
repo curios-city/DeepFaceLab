@@ -22,7 +22,7 @@ class XSegModel(ModelBase):
         ask_override = False if self.read_from_conf else self.ask_override()
 
         if not self.is_first_run() and ask_override:
-            if io.input_bool(f"Restart training?", False, help_message="Reset model weights and start training from scratch."):
+            if io.input_bool(f"重新开始训练?", False, help_message="重置模型权重并从头开始训练."):
                 self.set_iter(0)
 
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
@@ -30,15 +30,15 @@ class XSegModel(ModelBase):
 
         if self.is_first_run():
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
-                self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head'], help_message="Half / mid face / full face / whole face / head. Choose the same as your deepfake model.").lower()
+                self.options['face_type'] = io.input_str ("人脸类型 Face type", default_face_type, ['h','mf','f','wf','head'], help_message="Half / mid face / full face / whole face / head. 选择与您模型相同的选项.").lower()
 
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.ask_batch_size(4, range=[2,16])
-                self.options['pretrain'] = io.input_bool ("Enable pretraining mode", default_pretrain)
+                self.options['pretrain'] = io.input_bool ("启用预训练模式 Enable pretraining mode", default_pretrain)
         
         if not self.is_exporting and (self.options['pretrain'] and self.get_pretraining_data_path() is None):
-            raise Exception("pretraining_data_path is not defined")
+            raise Exception("pretraining_data_path 未定义")
             
         self.pretrain_just_disabled = (default_pretrain == True and self.options['pretrain'] == False)
         
@@ -281,7 +281,7 @@ class XSegModel(ModelBase):
         
     def export_dfm (self):
         output_path = self.get_strpath_storage_for_file(f'model.onnx')
-        io.log_info(f'Dumping .onnx to {output_path}')
+        io.log_info(f'导出 .onnx 到 {output_path}')
         tf = nn.tf
         
         with tf.device (nn.tf_default_device_name):
