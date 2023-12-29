@@ -1,63 +1,63 @@
 import shutil
 
 def print_community_info():
+    # 获取终端窗口的宽度
+    terminal_width, _ = shutil.get_terminal_size()
 
-    print_logo()
-
+    # 打印分界线
+    print("-" * terminal_width)
     print ('')
+    print_logo()
+    print ('')
+    print("-" * terminal_width)
 
-    print ('You are using Machine Video Editor community fork')
+    #print ('You are using Machine Video Editor community fork')
 
-    print_discord_info()
+    #print_discord_info()
 
-    print_commercial_contact()
+    #print_commercial_contact()
 
     print_dontation_link()
 
     print_recruitment_info()
 
-    print('')
+    print("-" * terminal_width)
 
 def print_discord_info():
-    print ('Join us in discord, invite link https://discord.gg/KBQB8x9K5c')
+    print ('此版本是Machine Video Editor社区分支版本')
 
 def print_commercial_contact():
-    print ('Commercial inquires send to ognjen@syntheticfactory.com (shared with the group)')
+    print ('此版本是Machine Video Editor社区分支版本')
 
+    
 def print_logo():
+    print("                     └╧╦┙┭  _ooOoo_  ┮┕╦╧┘              ")
+    print("                      ┞┴╩╪═o8888888o═╪╩┩                ")
+    print("                          88  ━.━ 88                    ")
+    print("                          (|   ╩  |/)                   ")
+    print("                           O\ ﹄  /O                    ")
+    print("                        ____/'---'\\____                ")
+    print("                       / .' \\\| |// '.\\               ")
+    print("                      / \\\||| : |||//  \\              ")
+    print("                     / _||||| -:- |||||- \\             ")
+    print("                     | | | \\\\\\ - /// | ||            ")
+    print("                     | \\_| ''\\---/'' |_/ |            ")
+    print("                     \\ .-\\__ '-' ___/-. /             ")
+    print("                   ___'. .' /--.--\\ '. . '___          ")
+    print("                  ."" '< '.___\\_<|>_/___.' >' "".      ")
+    print("               | | : '- \\'.;'\\ _ /';.'/ - ' : | |     ")
+    print("                 \\ \\ '-. \\_ __\\ /__ _/ .-' / /      ")
+    print("         ======'-.____'-.___\\_____/___.-'____.-'====== ")
+    print("                            `=---='                     ")
+    print("                                                        ")
+    print("          神农保佑         DeepFaceLab        永不炸丹  ")
 
-    logo = []                                                       
-    logo.append('                                           #####           ')
-    logo.append('                                   .##############*        ')
-    logo.append('                                     ###############(###   ')
-    logo.append('                   **           ##*#########/(############ ') 
-    logo.append('                  /&&&&%*      ######### ##   (# #######   ') 
-    logo.append('                  /&&&&&&&&&/, (####### #       #*######   ') 
-    logo.append('                  *&&&&&&&&&&&&&#/#####.#(      # #########') 
-    logo.append('                  *&&&&&&&&&&&&&%%%%%((## /#### ########## ') 
-    logo.append('           ###    *&%%%%%%%%&&&&%%%%%%%%%#(###########     ') 
-    logo.append('       ########(##(%%%%%%%%&&&&&&&&&&&%%%%%%%#(######.     ') 
-    logo.append('       /##########(%%%%%%%%%%%&&%%%%&&&%%%%%&&&&%%(#*      ') 
-    logo.append('        ##########(%%%%%%%%%%%%%%%%%%&&&&&&&&&&&&#.        ') 
-    logo.append('  ##. ###########(/&&&&%%%%%%%%%%%%%%%&&&&&&&/             ') 
-    logo.append(' ############# (##/&&&&%%&%%%%%%%%%&&&&&%*                 ') 
-    logo.append('.############ #   *&&&&&&%%&%%%%%%%%(,                     ') 
-    logo.append(' *########## ##   *&&&&&&&%&%%%%(#####(                    ') 
-    logo.append('     ######## #   *&&&&&&%%#(###########                   ') 
-    logo.append('     ######### ###*&&&&#( #############,                   ') 
-    logo.append('  ################  .  ###########                         ')
-    logo.append('   #############################(                          ') 
-    logo.append('     ###  *######################                          ') 
-    logo.append('             ####################.                         ') 
-    logo.append('            *#######*      ###                             ')
-
-    cols = shutil.get_terminal_size().columns
-    for l_str in logo:
-        print(l_str.center(0 if cols < 60 else cols), end="")
-    #print(logo_str.center(100))
+#└╧╦┙     ┕╦╧┘
+# ┞┴╩╪═ ╪═╩┩
 
 def print_dontation_link():
-    print ('Support us via donation https://www.paypal.me/ognjenjaric or patreon https://www.patreon.com/machineeditor')
+    print ('此版本是Machine Video Editor社区分支版本')
 
 def print_recruitment_info():
-    print ('If you would like to contribute we are looking for more members, apply via discord!')
+    print ('由神农氏编辑汉化！QQ群：747439134')
+
