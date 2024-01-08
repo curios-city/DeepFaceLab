@@ -3,6 +3,9 @@ import operator
 
 import numpy as np
 
+import os
+import shutil
+
 # from psutil import cpu_count
 
 from core.interact import interact as io
@@ -2405,72 +2408,86 @@ class SAEHDModel(ModelBase):
 
     # function is WIP
     def generate_training_state(self):
+        # 导入所需模块
         from tqdm import tqdm
 
         import datetime
         import json
         from itertools import zip_longest
         import multiprocessing as mp
+        # 生成训练状态
+        src_gen = self.generator_list[0]  # 获取生成器列表中的第一个生成器对象，赋值给变量src_gen
+        dst_gen = self.generator_list[1]  # 获取生成器列表中的第二个生成器对象，赋值给变量dst_gen
+        self.src_sample_state = []  # 初始化变量self.src_sample_state为空列表
+        self.dst_sample_state = []  # 初始化变量self.dst_sample_state为空列表
 
-        src_gen = self.generator_list[0]
-        dst_gen = self.generator_list[1]
-        self.src_sample_state = []
-        self.dst_sample_state = []
-
-        src_samples = src_gen.samples
-        dst_samples = dst_gen.samples
-        src_len = len(src_samples)
-        dst_len = len(dst_samples)
-        length = src_len
-        if length < dst_len:
-            length = dst_len
+        src_samples = src_gen.samples   # 获取源生成器的样本
+        dst_samples = dst_gen.samples   # 获取目标生成器的样本
+        src_len = len(src_samples)   # 获取源样本的长度
+        dst_len = len(dst_samples)   # 获取目标样本的长度
+        length = src_len   # 初始化长度为源样本的长度
+        if length < dst_len:   # 如果源样本的长度小于目标样本的长度
+            length = dst_len   # 更新长度为目标样本的长度
 
         # set paths
         # create core folder
         self.state_history_path = self.saved_models_path / (
             f"{self.get_model_name()}_state_history"
         )
+        # 状态历史记录路径为保存模型路径下的特定模型名称加下划线加状态历史记录
         if not self.state_history_path.exists():
+            # 如果状态历史记录路径不存在
             self.state_history_path.mkdir(exist_ok=True)
+            # 在状态历史记录路径下创建新目录
         # create state folder
-        idx_str = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
-        idx_state_history_path = self.state_history_path / idx_str
-        idx_state_history_path.mkdir()
+        idx_str = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")  # 获取当前时间戳
+        idx_state_history_path = self.state_history_path / idx_str  # 获取状态历史记录路径
+        idx_state_history_path.mkdir()  # 创建状态历史记录路径
         # create set folders
-        self.src_state_path = idx_state_history_path / "src"
-        self.src_state_path.mkdir()
-        self.dst_state_path = idx_state_history_path / "dst"
-        self.dst_state_path.mkdir()
+        self.src_state_path = idx_state_history_path / "src"  # 指定源状态路径为索引状态历史路径下的"src"文件夹
+        self.src_state_path.mkdir()  # 创建源状态文件夹
+        self.dst_state_path = idx_state_history_path / "dst"  # 指定目标状态路径为索引状态历史路径下的"dst"文件夹
+        self.dst_state_path.mkdir()  # 创建目标状态文件夹
 
-        print("Generating dataset state snapshot\r")
+        print("Generating dataset state snapshot 生成数据集状态快照\r")
 
         # doing batch 2 always since it is coded to always expect dst and src
         # if one is smaller reapeating the last sample as a placeholder
 
         # 0 means ignore and use dummy data
+        # 将源样本和目标样本进行等长打包，并使用0填充
         data_list = list(zip_longest(src_samples, dst_samples, fillvalue=0))
+
+        # 创建一个全零的虚拟输入数组，形状为(self.resolution, self.resolution, 3)，数据类型为np.float32
         self._dummy_input = np.zeros(
             (self.resolution, self.resolution, 3), dtype=np.float32
         )
+
+        # 创建一个全零的虚拟掩码数组，形状为(self.resolution, self.resolution, 1)，数据类型为np.float32
         self._dummy_mask = np.zeros(
             (self.resolution, self.resolution, 1), dtype=np.float32
         )
 
+        # 对于数据列表中的每个样本元组，使用tqdm库进行迭代
         for sample_tuple in tqdm(
-            data_list, desc="Processing samples", total=len(data_list)
+            data_list, desc="数据下载中", total=len(data_list)
         ):
+            # 调用处理器函数处理样本元组
             self._processor(sample_tuple)
 
         # save model state params
         # copy model summary
         # model_summary = self.options.copy()
-        model_summary = {}
-        model_summary["iter"] = self.get_iter()
-        model_summary["name"] = self.get_model_name()
+        model_summary = {}  # 创建一个空字典，用于存储模型摘要信息
+        model_summary["iter"] = self.get_iter()  # 获取当前迭代次数，并将其作为"iter"键的值存储到model_summary字典中
+        model_summary["name"] = self.get_model_name()  # 获取模型名称，并将其作为"name"键的值存储到model_summary字典中
 
         # error with some types, need to double check
         with open(idx_state_history_path / "model_summary.json", "w") as outfile:
+            # 使用open函数打开文件model_summary.json，以写入模式写入数据到文件中
+            # 文件指针会由with语句自动管理
             json.dump(model_summary, outfile)
+            # 将model_summary中的数据以json格式写入outfile文件中
 
         # training state, full loss stuff from .dat file - prolly should be global
         # state_history_json = self.loss_history
@@ -2483,22 +2500,24 @@ class SAEHDModel(ModelBase):
                 {"name": "dst", "path": str(self.training_data_dst_path)},
             ]
         }
+
+        # 创建一个包含训练数据源路径和训练数据目标路径的配置字典
         with open(self.state_history_path / "config.json", "w") as outfile:
             json.dump(config_dict, outfile)
-
         # save image loss data
         src_full_state_dict = {
-            "data": self.src_sample_state,
-            "set": "src",
-            "type": "set-state",
+            "data": self.src_sample_state,  # 定义一个字典src_full_state_dict，其中键"data"的值为self.src_sample_state
+            "set": "src",  # 键"set"的值为"src"
+            "type": "set-state",  # 键"type"的值为"set-state"
         }
-        with open(idx_state_history_path / "src_state.json", "w") as outfile:
-            json.dump(src_full_state_dict, outfile)
+
+        with open(idx_state_history_path / "src_state.json", "w") as outfile:  # 打开文件"src_state.json"，以写入方式打开，并将文件对象赋值给outfile
+            json.dump(src_full_state_dict, outfile)  # 将src_full_state_dict以json格式写入outfile
 
         dst_full_state_dict = {
-            "data": self.dst_sample_state,
-            "set": "dst",
-            "type": "set-state",
+            "data": self.dst_sample_state,  # 将self.dst_sample_state赋值给键"data"
+            "set": "dst",  # 将字符串"dst"赋值给键"set"
+            "type": "set-state",  # 将字符串"set-state"赋值给键"type"
         }
         with open(idx_state_history_path / "dst_state.json", "w") as outfile:
             json.dump(dst_full_state_dict, outfile)
@@ -2506,14 +2525,26 @@ class SAEHDModel(ModelBase):
         print("完成")
 
     def _get_formatted_image(self, raw_output):
+        # 将原始输出格式转换为指定的数据格式，并进行裁剪，使其值在0到1之间
         formatted = np.clip(
             nn.to_data_format(raw_output, "NHWC", self.model_data_format), 0.0, 1.0
         )
+        # 将第一个维度的维度数压缩，得到最终的输出图像
         formatted = np.squeeze(formatted, 0)
 
         return formatted
-
+#导出src dst Loss损失图日志=========================================================================
     def _processor(self, samples_tuple):
+        """
+        对输入的样本元组进行处理
+
+        Args:
+            samples_tuple: 一个包含两个样本的元组，samples_tuple[0]为源样本，samples_tuple[1]为目标样本
+
+        Returns:
+            None
+
+        """
         if samples_tuple[0] != 0:
             src_sample_bgr, src_sample_mask, src_sample_mask_em = prepare_sample(
                 samples_tuple[0], self.options, self.resolution, self.face_type
@@ -2536,62 +2567,79 @@ class SAEHDModel(ModelBase):
             )
 
         (
-            src_loss,
-            dst_loss,
-            pred_src_src,
-            pred_src_srcm,
-            pred_dst_dst,
-            pred_dst_dstm,
-            pred_src_dst,
-            pred_src_dstm,
-        ) = self.get_src_dst_information(
-            data_format_change(src_sample_bgr),
-            data_format_change(src_sample_bgr),
-            data_format_change(src_sample_mask),
-            data_format_change(src_sample_mask_em),
-            data_format_change(dst_sample_bgr),
-            data_format_change(dst_sample_bgr),
-            data_format_change(dst_sample_mask),
-            data_format_change(dst_sample_mask_em),
+            src_loss,  # 源图像损失
+            dst_loss,  # 目标图像损失
+            pred_src_src,  # 源图像预测的源图像
+            pred_src_srcm,  # 源图像预测的源图像混合
+            pred_dst_dst,  # 目标图像预测的目标图像
+            pred_dst_dstm,  # 目标图像预测的目标图像强度变化
+            pred_src_dst,  # 源图像预测的目标图像
+            pred_src_dstm  # 源图像预测的目标图像强度变化
+        ) = self.get_src_dst_information(  # 调用get_src_dst_information方法获取源图像和目标图像的相关信息
+            data_format_change(src_sample_bgr),  # 调用data_format_change方法改变源图像颜色通道的顺序
+            data_format_change(src_sample_bgr),  # 调用data_format_change方法改变源图像颜色通道的顺序
+            data_format_change(src_sample_mask),  # 调用data_format_change方法改变源图像掩码的通道顺序
+            data_format_change(src_sample_mask_em),  # 调用data_format_change方法改变源图像掩码能量的通道顺序
+            data_format_change(dst_sample_bgr),  # 调用data_format_change方法改变目标图像颜色通道的顺序
+            data_format_change(dst_sample_bgr),  # 调用data_format_change方法改变目标图像颜色通道的顺序
+            data_format_change(dst_sample_mask),  # 调用data_format_change方法改变目标图像掩码的通道顺序
+            data_format_change(dst_sample_mask_em)  # 调用data_format_change方法改变目标图像掩码能量的通道顺序
         )
 
         if samples_tuple[0] != 0:
+            # 获取样本文件名的.stem
             src_file_name = Path(samples_tuple[0].filename).stem
 
+            # 将处理后的图像保存为jpg文件
             cv2_imwrite(
                 self.src_state_path / f"{src_file_name}_output.jpg",
                 self._get_formatted_image(pred_src_src) * 255,
                 [int(cv2.IMWRITE_JPEG_QUALITY), 100],
             )  # output
 
-            src_data = {
-                "loss": float(src_loss[0]),
-                "input": f"{src_file_name}.jpg",
-                "output": f"{src_file_name}_output.jpg",
-            }
-            self.src_sample_state.append(src_data)
+        src_data = {
+            # 将src_loss的第一个元素转换为浮点数并赋值给loss键
+            "loss": float(src_loss[0]),
+            # 将src_file_name加上后缀.jpg并赋值给input键
+            "input": f"{src_file_name}.jpg",
+            # 将src_file_name加上后缀_output.jpg并赋值给output键
+            "output": f"{src_file_name}_output.jpg",
+        }
+        # 将src_data添加到self.src_sample_state列表中
+        self.src_sample_state.append(src_data)
 
         if samples_tuple[1] != 0:
+            # 获取文件名并去扩展名
             dst_file_name = Path(samples_tuple[1].filename).stem
-
+            
+            # 将预测结果保存为图片
             cv2_imwrite(
                 self.dst_state_path / f"{dst_file_name}_output.jpg",
                 self._get_formatted_image(pred_dst_dst) * 255,
                 [int(cv2.IMWRITE_JPEG_QUALITY), 100],
-            )  # output
+            )  # 输出图片
             cv2_imwrite(
                 self.dst_state_path / f"{dst_file_name}_swap.jpg",
                 self._get_formatted_image(pred_src_dst) * 255,
                 [int(cv2.IMWRITE_JPEG_QUALITY), 100],
-            )  # swap
+            )  # 交换图片
 
+            # 构建保存结果的数据字典
             dst_data = {
                 "loss": float(dst_loss[0]),
                 "input": f"{dst_file_name}.jpg",
                 "output": f"{dst_file_name}_output.jpg",
                 "swap": f"{dst_file_name}_swap.jpg",
             }
+            # 将结果数据添加到目标样本状态列表中
             self.dst_sample_state.append(dst_data)
-
+            
+            #删除self.dst_state_path文件夹
+            if os.path.exists(self.dst_state_path):
+                shutil.rmtree(self.dst_state_path)
+                
+            #删除self.src_state_path文件夹
+            if os.path.exists(self.src_state_path):
+                shutil.rmtree(self.src_state_path)
 
 Model = SAEHDModel
