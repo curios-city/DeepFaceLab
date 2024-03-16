@@ -24,7 +24,7 @@ from core.cv2ex import cv2_imwrite
 from tqdm import tqdm
 
 
-class SAEHDModel(ModelBase):
+class MEModel(ModelBase):
     # 重写父类的on_initialize_options方法
     def on_initialize_options(self):
         # 获取当前的设备配置
@@ -128,14 +128,16 @@ class SAEHDModel(ModelBase):
         default_random_jpeg = self.options["random_jpeg"] = self.load_or_def_option(
             "random_jpeg", False
         )
-
+        
+        """
         random_shadow_src_options = self.options[
             "random_shadow_src"
         ] = self.load_or_def_option("random_shadow_src", False)
         random_shadow_dst_options = self.options[
             "random_shadow_dst"
         ] = self.load_or_def_option("random_shadow_dst", False)
-
+        """
+        '''
         # 根据是否从配置文件读取或配置文件是否存在，设置随机阴影选项
         if (
             self.read_from_conf and not self.config_file_exists
@@ -170,7 +172,7 @@ class SAEHDModel(ModelBase):
             # 删除旧的随机阴影选项
             del self.options["random_shadow_src"]
             del self.options["random_shadow_dst"]
-
+        '''
         # 加载或定义其他训练相关的默认选项
         default_background_power = self.options[
             "background_power"
@@ -214,15 +216,14 @@ class SAEHDModel(ModelBase):
                 self.read_from_conf and not self.config_file_exists
             ) or not self.read_from_conf:
                 # 如果是首次运行或需要覆盖设置，则询问用户输入各种配置
-                self.ask_session_name()
                 self.ask_autobackup_hour()
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
                 self.options["preview_samples"] = np.clip(
                     io.input_int(
-                        "预览样本数量",
+                        "预览样本数量（纵向）",
                         default_preview_samples,
-                        add_info="1 - 16",
+                        add_info="1 - 6",
                         help_message="典型的精细值为4",
                     ),
                     1,
@@ -239,9 +240,9 @@ class SAEHDModel(ModelBase):
                 self.ask_random_dst_flip()
                 self.ask_batch_size(suggest_batch_size)
                 self.options["use_fp16"] = io.input_bool(
-                    "使用fp16",
+                    "使用fp16（测试功能）",
                     default_usefp16,
-                    help_message="提高训练/推理速度，缩小模型大小。模型可能会崩溃。1-5k 迭代次数后启用",
+                    help_message="提高训练速度，减少显存占用，可增加BS上限。前期易崩溃，后期精度不够，建议5000~200000迭代使用, 务必先备份！",
                 )
                 self.options["cpu_cap"] = np.clip(
                     io.input_int(
@@ -282,10 +283,11 @@ class SAEHDModel(ModelBase):
                         help_message="""
                             'df' 保持更多身份特征的脸部（更像SRC）。
                             'liae' 可以修复过于不同的脸部形状（更像DST）。
-                            '-u' 增加了面部的相似度。
-                            '-d' 计算成本减半。
-
-                            示例: df, liae, df-d, df-ud, liae-ud, ...
+                            '-u' 增加与源人脸（SRC）的相似度，需要更多 VRAM。
+                            '-d' 计算成本减半。需要更长的训练时间，并建议使用预训练模型。分辨率必须按 32 的倍数更改
+							'-t' 增加与源人脸（SRC）的相似度。
+							'-c' （实验性）将激活函数设置为余弦单位（默认值：Leaky ReLu）。
+                            示例: df, liae-d, df-dt, liae-udt, ...
                             """,
                     ).lower()
 
@@ -335,7 +337,9 @@ class SAEHDModel(ModelBase):
             default_d_mask_dims = self.options["d_mask_dims"] = self.load_or_def_option(
                 "d_mask_dims", default_d_mask_dims
             )
-
+            # 作者签名
+            self.ask_author_name()
+            
         # 首次运行时获取AutoEncoder、Encoder和Decoder的维度配置
         if self.is_first_run():
             if (
@@ -378,7 +382,7 @@ class SAEHDModel(ModelBase):
 
                 d_mask_dims = np.clip(
                     io.input_int(
-                        "解码器掩码尺寸 Decoder mask dimensions",
+                        "解码器遮罩尺寸 Decoder mask dimensions",
                         default_d_mask_dims,
                         add_info="16-256",
                         help_message="典型的遮罩维度是解码器维度的三分之一。如果你手动从目标遮罩中剔除障碍物，可以增加此参数以获得更好的质量。",
@@ -386,6 +390,13 @@ class SAEHDModel(ModelBase):
                     16,
                     256,
                 )
+
+                self.options["adabelief"] = io.input_bool(
+                    "使用AdaBelief优化器 Use AdaBelief optimizer?",
+                    default_adabelief,
+                    help_message="使用 AdaBelief 优化器。它需要更多的 VRAM，但模型的准确性和泛化程度更高",
+                )
+
                 self.options["d_mask_dims"] = d_mask_dims + d_mask_dims % 2
 
         # 首次运行或需要覆盖设置时的配置
@@ -452,12 +463,6 @@ class SAEHDModel(ModelBase):
                     help_message="在一个 GPU 上进行训练时，默认情况下模型和优化器权重会放在 GPU 上，以加速训练过程。您可以将它们放在 CPU 上，以释放额外的 VRAM，从而设置更大的维度",
                 )
 
-                self.options["adabelief"] = io.input_bool(
-                    "使用AdaBelief优化器 Use AdaBelief optimizer?",
-                    default_adabelief,
-                    help_message="使用 AdaBelief 优化器。它需要更多的 VRAM，但模型的准确性和泛化程度更高",
-                )
-
                 self.options["lr_dropout"] = io.input_str(
                     f"使用学习率下降 Use learning rate dropout",
                     default_lr_dropout,
@@ -501,7 +506,7 @@ class SAEHDModel(ModelBase):
                 )
 
                 self.options["random_downsample"] = io.input_bool(
-                    "启用样本随机采样降低采样率 Enable random downsample of samples",
+                    "启用样本随机降低采样 Enable random downsample of samples",
                     default_random_downsample,
                     help_message="通过缩小部分样本来挑战模型",
                 )
@@ -520,13 +525,14 @@ class SAEHDModel(ModelBase):
                     default_random_jpeg,
                     help_message="通过对某些样本应用 jpeg 压缩的质量降级来挑战模型",
                 )
+                '''
                 self.options["random_shadow"] = io.input_str(
                     "启用对样本的随机阴影和高光 Enable random shadows and highlights of samples",
                     default_random_shadow,
                     ["none", "src", "dst", "all"],
                     help_message="有助于在数据集中创建暗光区域。如果你的src数据集缺乏阴影/不同的光照情况；使用dst以帮助泛化；或者使用all以满足两者的需求",
                 )
-
+                '''
                 self.options["gan_power"] = np.clip(
                     io.input_number(
                         "GAN强度 GAN power",
@@ -587,7 +593,7 @@ class SAEHDModel(ModelBase):
                 if "df" in self.options["archi"]:
                     self.options["true_face_power"] = np.clip(
                         io.input_number(
-                            "真脸强度 'True face' power.",
+                            "真脸(src)强度 'True face' power.",
                             default_true_face_power,
                             add_info="0.0000 .. 1.0",
                             help_message="实验选项。判别结果面孔更像原始面孔。数值越大，判别能力越强。典型值为0.01。比较 - https://i.imgur.com/czScS9q.png",
@@ -600,7 +606,7 @@ class SAEHDModel(ModelBase):
 
                 self.options["background_power"] = np.clip(
                     io.input_number(
-                        "背景强度 Background power",
+                        "背景(src)强度 Background power",
                         default_background_power,
                         add_info="0.0..1.0",
                         help_message="了解遮罩外的区域。有助于平滑遮罩边界附近的区域。可随时使用",
@@ -611,7 +617,7 @@ class SAEHDModel(ModelBase):
 
                 self.options["face_style_power"] = np.clip(
                     io.input_number(
-                        "人脸风格强度 Face style power",
+                        "人脸(dst)强度 Face style power",
                         default_face_style_power,
                         add_info="0.0..100.0",
                         help_message="学习预测脸部的颜色，使其与遮罩内的 dst 相同。如果要将此选项与whole_face一起使用，则必须使用 XSeg 训练掩码。警告： 只有在 10k 次之后，当预测的面部足够清晰，可以开始学习风格时，才能启用该选项。从 0.001 值开始，检查历史变化。启用此选项会增加模型崩溃的几率",
@@ -621,7 +627,7 @@ class SAEHDModel(ModelBase):
                 )
                 self.options["bg_style_power"] = np.clip(
                     io.input_number(
-                        "背景风格强度 Background style power",
+                        "背景(dst)强度 Background style power",
                         default_bg_style_power,
                         add_info="0.0..100.0",
                         help_message="学习预测脸部遮罩外的区域与 dst 相同。如果要将此选项用于whole_face，则必须使用 XSeg 训练蒙板。对于 whole_face，你必须使用 XSeg 训练蒙板。这会使脸部更像 dst。启用此选项会增加模型崩溃的几率。典型值为 2.0",
@@ -634,12 +640,12 @@ class SAEHDModel(ModelBase):
                     f"色彩转换模式 Color transfer for src faceset",
                     default_ct_mode,
                     ["none", "rct", "lct", "mkl", "idt", "sot", "fs-aug", "cc-aug"],
-                    help_message="改变靠近 dst 样本的 src 样本的颜色分布。尝试所有模式，找出最佳方案。FS aug 为 dst 和 sr 添加随机颜色",
+                    help_message="改变靠近 dst 样本的 src 样本的颜色分布。尝试所有模式，找出最佳方案。CC和FS aug 为 dst 和 src 添加随机颜色",
                 )
                 self.options["random_color"] = io.input_bool(
                     "随机颜色 Random color",
                     default_random_color,
-                    help_message="在LAB色彩空间中，样本随机围绕 L 轴旋转，有助于训练泛化",
+                    help_message="在LAB色彩空间中，样本随机围绕 L 轴旋转，有助于训练泛化。说人话就是亮度不变，但是色相变化比hsv大。hsv的亮度和对比确实不建议大幅度，所以本选项是互补的，建议是轮流开启而非同时开启！",
                 )
                 self.options["clipgrad"] = io.input_bool(
                     "启用梯度裁剪 Enable gradient clipping",
@@ -659,7 +665,7 @@ class SAEHDModel(ModelBase):
         self.gan_model_changed = (
             default_gan_patch_size != self.options["gan_patch_size"]
         ) or (default_gan_dims != self.options["gan_dims"])
-
+        # 预训转正
         self.pretrain_just_disabled = (
             default_pretrain == True and self.options["pretrain"] == False
         )
@@ -707,7 +713,12 @@ class SAEHDModel(ModelBase):
         # 设置是否预训练
         self.pretrain = self.options["pretrain"]
         if self.pretrain_just_disabled:
-            self.set_iter(0)
+            ask_for_clean = input("是否将迭代数归零？请输入 'y' 或 'n': ")
+            if ask_for_clean.lower() == "y":
+                self.set_iter(0)
+                print("迭代数已重置！")
+            else:
+                print("保留迭代数结束预训！")
 
         # 设置是否使用AdaBelief优化器
         adabelief = self.options["adabelief"]
@@ -719,25 +730,19 @@ class SAEHDModel(ModelBase):
                 "Export quantized?", False, help_message="使导出的模型更快。如果遇到问题，请禁用此选项。"
             )
 
-        # 设置GAN的相关参数
-        self.gan_power = gan_power = 0.0 if self.pretrain else self.options["gan_power"]
-        random_warp = False if self.pretrain else self.options["random_warp"]
-        random_src_flip = self.random_src_flip if not self.pretrain else True
-        random_dst_flip = self.random_dst_flip if not self.pretrain else True
-        random_hsv_power = (
-            self.options["random_hsv_power"] if not self.pretrain else 0.0
-        )
+        # 设置相关参数 （已解锁预训练的所有锁定）
+        self.gan_power = gan_power = self.options["gan_power"]
+        random_warp = self.options["random_warp"]
+        random_src_flip = self.random_src_flip
+        random_dst_flip = self.random_dst_flip
+        random_hsv_power = self.options["random_hsv_power"]
         blur_out_mask = self.options["blur_out_mask"]
 
-        # 如果处于预训练阶段，调整一些参数设置
+        # 如果处于预训练阶段，调整一些参数设置（已解RW\flip\hsv\blur,保留gan和style的限制）
         if self.pretrain:
-            self.options_show_override["lr_dropout"] = "n"
-            self.options_show_override["random_warp"] = False
             self.options_show_override["gan_power"] = 0.0
-            self.options_show_override["random_hsv_power"] = 0.0
             self.options_show_override["face_style_power"] = 0.0
             self.options_show_override["bg_style_power"] = 0.0
-            self.options_show_override["uniform_yaw"] = True
 
         # 设置是否进行遮罩训练和颜色转换模式
         masked_training = self.options["masked_training"]
@@ -745,6 +750,7 @@ class SAEHDModel(ModelBase):
         if ct_mode == "none":
             ct_mode = None
 
+        '''
         # 根据配置文件的使用情况设置随机阴影源和目标
         if (
             self.read_from_conf and not self.config_file_exists
@@ -762,6 +768,7 @@ class SAEHDModel(ModelBase):
         else:
             random_shadow_src = self.options["random_shadow_src"]
             random_shadow_dst = self.options["random_shadow_dst"]
+        '''
 
         # 设置模型优化选项
         models_opt_on_gpu = (
@@ -1844,68 +1851,98 @@ class SAEHDModel(ModelBase):
 
             self.AE_merge = AE_merge
 
-        # Loading/initializing all models/optimizers weights
+        # 遍历模型和对应的文件名
         for model, filename in io.progress_bar_generator(
             self.model_filename_list, "初始化模型"
         ):
+            # 检查预训练是否刚刚被禁用
             if self.pretrain_just_disabled:
                 do_init = False
+                # 如果架构类型包含"df"
                 if "df" in archi_type:
+                    # 对于特定的模型，需要进行初始化
                     if model == self.inter:
-                        do_init = True
+                        print("预训练转正...")
+                        ask_for_clean = input(
+                            "是否重置inter？（重置后效果更好，但训练更慢）请输入 'y' 或 'n': "
+                        )
+                        if ask_for_clean.lower() == "y":
+                            do_init = True
+                            print("inter已重置！")
+                        else:
+                            do_init = False
+                            print("保留inter继续训练！建议开启随机扭曲！")
+
+                # 如果架构类型是"liae"
                 elif "liae" in archi_type:
-                    if model == self.inter_AB or model == self.inter_B:
-                        do_init = True
+                    # 对于特定的模型，需要进行初始化
+                    if model == self.inter_AB:
+                        ask_for_clean = input(
+                            "是否重置inter_AB？（重置后效果更好，但训练更慢）请输入 'y' 或 'n': "
+                        )
+                        if ask_for_clean.lower() == "y":
+                            do_init = True
+                            print("inter_AB已重置！")
+                        else:
+                            do_init = False
+                            print("保留inter_AB继续训练！建议开启随机扭曲！")
             else:
+                # 检查是否是第一次运行
                 do_init = self.is_first_run()
+                # 如果是训练模式，并且GAN的能力不为0，对特定的模型进行初始化
                 if self.is_training and gan_power != 0 and model == self.D_src:
                     if self.gan_model_changed:
                         do_init = True
 
+            # 如果不需要初始化，则尝试从文件加载模型权重
             if not do_init:
                 do_init = not model.load_weights(
                     self.get_strpath_storage_for_file(filename)
                 )
 
+            # 如果需要初始化，初始化模型权重
             if do_init:
                 model.init_weights()
 
         ###############
-
-        # initializing sample generators
+        # 初始化样本生成器
         if self.is_training:
+            # 如果是在训练模式下
             training_data_src_path = (
-                self.training_data_src_path
-                if not self.pretrain
-                else self.get_pretraining_data_path()
+                self.training_data_src_path  # 使用指定的训练数据源路径
+                if not self.pretrain  # 如果不是在预训练模式
+                else self.get_pretraining_data_path()  # 否则使用预训练数据路径
             )
             training_data_dst_path = (
-                self.training_data_dst_path
-                if not self.pretrain
-                else self.get_pretraining_data_path()
+                self.training_data_dst_path  # 使用指定的目标训练数据路径
+                if not self.pretrain  # 如果不是在预训练模式
+                else self.get_pretraining_data_path()  # 否则使用预训练数据路径
             )
-
+            # 如果指定了ct_mode并且不是预训练模式，则使用目标训练数据路径
             random_ct_samples_path = (
                 training_data_dst_path
                 if ct_mode is not None and not self.pretrain
-                else None
+                else None  # 否则不使用任何路径
             )
 
+            # 获取CPU核心数，但不超过设定的上限
             cpu_count = min(multiprocessing.cpu_count(), self.options["cpu_cap"])
-            src_generators_count = cpu_count // 2
-            dst_generators_count = cpu_count // 2
+            src_generators_count = cpu_count // 2  # 源数据生成器的数量为CPU核心数的一半
+            dst_generators_count = cpu_count // 2  # 目标数据生成器的数量也是CPU核心数的一半
             if ct_mode is not None:
-                src_generators_count = int(src_generators_count * 1.5)
+                src_generators_count = int(
+                    src_generators_count * 1.5
+                )  # 如果指定了ct_mode，则增加源数据生成器的数量
 
-            dst_aug = None
-            allowed_dst_augs = ["fs-aug", "cc-aug"]
+            dst_aug = None  # 初始化目标数据增强为None
+            allowed_dst_augs = ["fs-aug", "cc-aug"]  # 定义允许的目标数据增强类型
             if ct_mode in allowed_dst_augs:
-                dst_aug = ct_mode
+                dst_aug = ct_mode  # 如果ct_mode是允许的类型，则使用该类型的数据增强
 
             channel_type = (
-                SampleProcessor.ChannelType.LAB_RAND_TRANSFORM
+                SampleProcessor.ChannelType.LAB_RAND_TRANSFORM  # 如果开启了随机颜色选项
                 if self.options["random_color"]
-                else SampleProcessor.ChannelType.BGR
+                else SampleProcessor.ChannelType.BGR  # 否则使用BGR通道类型
             )
 
             # Check for pak names
@@ -1948,7 +1985,6 @@ class SAEHDModel(ModelBase):
                                 "random_noise": self.options["random_noise"],
                                 "random_blur": self.options["random_blur"],
                                 "random_jpeg": self.options["random_jpeg"],
-                                "random_shadow": random_shadow_src,
                                 "random_hsv_shift_amount": random_hsv_power,
                                 "transform": True,
                                 "channel_type": channel_type,
@@ -1964,7 +2000,6 @@ class SAEHDModel(ModelBase):
                                 "channel_type": channel_type,
                                 "ct_mode": ct_mode,
                                 "random_hsv_shift_amount": random_hsv_power,
-                                "random_shadow": random_shadow_src,
                                 "face_type": self.face_type,
                                 "data_format": nn.data_format,
                                 "resolution": resolution,
@@ -1984,7 +2019,7 @@ class SAEHDModel(ModelBase):
                                 "warp": False,
                                 "transform": True,
                                 "channel_type": SampleProcessor.ChannelType.G,
-                                "face_mask_type": SampleProcessor.FaceMaskType.FULL_FACE_EYES,
+                                "face_mask_type": SampleProcessor.FaceMaskType.EYES_MOUTH,
                                 "face_type": self.face_type,
                                 "data_format": nn.data_format,
                                 "resolution": resolution,
@@ -2011,7 +2046,6 @@ class SAEHDModel(ModelBase):
                                 "random_noise": self.options["random_noise"],
                                 "random_blur": self.options["random_blur"],
                                 "random_jpeg": self.options["random_jpeg"],
-                                "random_shadow": random_shadow_dst,
                                 "transform": True,
                                 "channel_type": channel_type,
                                 "ct_mode": dst_aug,
@@ -2025,7 +2059,6 @@ class SAEHDModel(ModelBase):
                                 "transform": True,
                                 "channel_type": channel_type,
                                 "ct_mode": dst_aug,
-                                "random_shadow": random_shadow_dst,
                                 "random_hsv_shift_amount": random_hsv_power,
                                 "face_type": self.face_type,
                                 "data_format": nn.data_format,
@@ -2046,7 +2079,7 @@ class SAEHDModel(ModelBase):
                                 "warp": False,
                                 "transform": True,
                                 "channel_type": SampleProcessor.ChannelType.G,
-                                "face_mask_type": SampleProcessor.FaceMaskType.FULL_FACE_EYES,
+                                "face_mask_type": SampleProcessor.FaceMaskType.EYES_MOUTH,
                                 "face_type": self.face_type,
                                 "data_format": nn.data_format,
                                 "resolution": resolution,
@@ -2415,19 +2448,20 @@ class SAEHDModel(ModelBase):
         import json
         from itertools import zip_longest
         import multiprocessing as mp
+
         # 生成训练状态
         src_gen = self.generator_list[0]  # 获取生成器列表中的第一个生成器对象，赋值给变量src_gen
         dst_gen = self.generator_list[1]  # 获取生成器列表中的第二个生成器对象，赋值给变量dst_gen
         self.src_sample_state = []  # 初始化变量self.src_sample_state为空列表
         self.dst_sample_state = []  # 初始化变量self.dst_sample_state为空列表
 
-        src_samples = src_gen.samples   # 获取源生成器的样本
-        dst_samples = dst_gen.samples   # 获取目标生成器的样本
-        src_len = len(src_samples)   # 获取源样本的长度
-        dst_len = len(dst_samples)   # 获取目标样本的长度
-        length = src_len   # 初始化长度为源样本的长度
-        if length < dst_len:   # 如果源样本的长度小于目标样本的长度
-            length = dst_len   # 更新长度为目标样本的长度
+        src_samples = src_gen.samples  # 获取源生成器的样本
+        dst_samples = dst_gen.samples  # 获取目标生成器的样本
+        src_len = len(src_samples)  # 获取源样本的长度
+        dst_len = len(dst_samples)  # 获取目标样本的长度
+        length = src_len  # 初始化长度为源样本的长度
+        if length < dst_len:  # 如果源样本的长度小于目标样本的长度
+            length = dst_len  # 更新长度为目标样本的长度
 
         # set paths
         # create core folder
@@ -2444,9 +2478,13 @@ class SAEHDModel(ModelBase):
         idx_state_history_path = self.state_history_path / idx_str  # 获取状态历史记录路径
         idx_state_history_path.mkdir()  # 创建状态历史记录路径
         # create set folders
-        self.src_state_path = idx_state_history_path / "src"  # 指定源状态路径为索引状态历史路径下的"src"文件夹
+        self.src_state_path = (
+            idx_state_history_path / "src"
+        )  # 指定源状态路径为索引状态历史路径下的"src"文件夹
         self.src_state_path.mkdir()  # 创建源状态文件夹
-        self.dst_state_path = idx_state_history_path / "dst"  # 指定目标状态路径为索引状态历史路径下的"dst"文件夹
+        self.dst_state_path = (
+            idx_state_history_path / "dst"
+        )  # 指定目标状态路径为索引状态历史路径下的"dst"文件夹
         self.dst_state_path.mkdir()  # 创建目标状态文件夹
 
         print("Generating dataset state snapshot 生成数据集状态快照\r")
@@ -2469,9 +2507,7 @@ class SAEHDModel(ModelBase):
         )
 
         # 对于数据列表中的每个样本元组，使用tqdm库进行迭代
-        for sample_tuple in tqdm(
-            data_list, desc="数据下载中", total=len(data_list)
-        ):
+        for sample_tuple in tqdm(data_list, desc="数据下载中", total=len(data_list)):
             # 调用处理器函数处理样本元组
             self._processor(sample_tuple)
 
@@ -2479,8 +2515,12 @@ class SAEHDModel(ModelBase):
         # copy model summary
         # model_summary = self.options.copy()
         model_summary = {}  # 创建一个空字典，用于存储模型摘要信息
-        model_summary["iter"] = self.get_iter()  # 获取当前迭代次数，并将其作为"iter"键的值存储到model_summary字典中
-        model_summary["name"] = self.get_model_name()  # 获取模型名称，并将其作为"name"键的值存储到model_summary字典中
+        model_summary[
+            "iter"
+        ] = self.get_iter()  # 获取当前迭代次数，并将其作为"iter"键的值存储到model_summary字典中
+        model_summary[
+            "name"
+        ] = self.get_model_name()  # 获取模型名称，并将其作为"name"键的值存储到model_summary字典中
 
         # error with some types, need to double check
         with open(idx_state_history_path / "model_summary.json", "w") as outfile:
@@ -2511,8 +2551,12 @@ class SAEHDModel(ModelBase):
             "type": "set-state",  # 键"type"的值为"set-state"
         }
 
-        with open(idx_state_history_path / "src_state.json", "w") as outfile:  # 打开文件"src_state.json"，以写入方式打开，并将文件对象赋值给outfile
-            json.dump(src_full_state_dict, outfile)  # 将src_full_state_dict以json格式写入outfile
+        with open(
+            idx_state_history_path / "src_state.json", "w"
+        ) as outfile:  # 打开文件"src_state.json"，以写入方式打开，并将文件对象赋值给outfile
+            json.dump(
+                src_full_state_dict, outfile
+            )  # 将src_full_state_dict以json格式写入outfile
 
         dst_full_state_dict = {
             "data": self.dst_sample_state,  # 将self.dst_sample_state赋值给键"data"
@@ -2533,7 +2577,8 @@ class SAEHDModel(ModelBase):
         formatted = np.squeeze(formatted, 0)
 
         return formatted
-#导出src dst Loss损失图日志=========================================================================
+
+    # 导出src dst Loss损失图日志=========================================================================
     def _processor(self, samples_tuple):
         """
         对输入的样本元组进行处理
@@ -2611,7 +2656,7 @@ class SAEHDModel(ModelBase):
         if samples_tuple[1] != 0:
             # 获取文件名并去扩展名
             dst_file_name = Path(samples_tuple[1].filename).stem
-            
+
             # 将预测结果保存为图片
             cv2_imwrite(
                 self.dst_state_path / f"{dst_file_name}_output.jpg",
@@ -2633,13 +2678,14 @@ class SAEHDModel(ModelBase):
             }
             # 将结果数据添加到目标样本状态列表中
             self.dst_sample_state.append(dst_data)
-            
-            #删除self.dst_state_path文件夹
+
+            # 删除self.dst_state_path文件夹
             if os.path.exists(self.dst_state_path):
                 shutil.rmtree(self.dst_state_path)
-                
-            #删除self.src_state_path文件夹
+
+            # 删除self.src_state_path文件夹
             if os.path.exists(self.src_state_path):
                 shutil.rmtree(self.src_state_path)
 
-Model = SAEHDModel
+
+Model = MEModel
