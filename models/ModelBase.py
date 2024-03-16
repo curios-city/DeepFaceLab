@@ -10,14 +10,13 @@ import datetime
 from pathlib import Path
 import yaml
 from jsonschema import validate, ValidationError
-
 import numpy as np
-
 from core import imagelib, pathex
 from core.cv2ex import *
 from core.interact import interact as io
 from core.leras import nn
 from samplelib import SampleGeneratorBase
+from prettytable import PrettyTable
 
 
 class ModelBase(object):
@@ -61,6 +60,7 @@ class ModelBase(object):
         self.debug = debug  # 是否处于调试模式
         self.reset_training = False  # 是否重置训练
         self.reduce_clutter = reduce_clutter  # 是否减少杂乱信息
+        self.author_name = "神农汉化"
 
         # 初始化模型类名和模型名
         self.model_class_name = model_class_name = Path(
@@ -122,9 +122,13 @@ class ModelBase(object):
                                     if is_rename or is_delete:
                                         if len(saved_models_names) != 0:
                                             if is_rename:
-                                                name = io.input_str(f"输入你想重命名的模型名称")
+                                                name = io.input_str(
+                                                    f"输入你想重命名的模型名称"
+                                                )
                                             elif is_delete:
-                                                name = io.input_str(f"输入你想删除的模型名称")
+                                                name = io.input_str(
+                                                    f"输入你想删除的模型名称"
+                                                )
 
                                             if name in saved_models_names:
                                                 if is_rename:
@@ -136,11 +140,21 @@ class ModelBase(object):
                                                     saved_models_path
                                                 ):
                                                     filepath_name = filepath.name
+                                                    try:
+                                                        (
+                                                            model_filename,
+                                                            remain_filename,
+                                                        ) = filepath_name.split("_", 1)
+                                                    except ValueError:
+                                                        # 当无法正确分割文件名时的处理逻辑
+                                                        print(
+                                                            "警告: model目录下有其他文件（比如压缩包）"
+                                                        )
+                                                        print(
+                                                            "非法文件名:", filepath_name
+                                                        )
+                                                        continue  # 跳过当前循环，继续下一个文件
 
-                                                    (
-                                                        model_filename,
-                                                        remain_filename,
-                                                    ) = filepath_name.split("_", 1)
                                                     if model_filename == name:
                                                         if is_rename:
                                                             new_filepath = (
@@ -163,7 +177,9 @@ class ModelBase(object):
                                 self.model_name = saved_models_names[model_idx]
 
                     else:
-                        self.model_name = io.input_str(f"未找到已保存的模型。创建一个新模型，输入名称", "new")
+                        self.model_name = io.input_str(
+                            f"未找到已保存的模型。创建一个新模型，输入名称", "new"
+                        )
                         self.model_name = self.model_name.replace("_", " ")
                     break
 
@@ -178,7 +194,6 @@ class ModelBase(object):
         self.loss_history = []  # 损失历史
         self.sample_for_preview = None  # 预览样本
         self.choosed_gpu_indexes = None  # 选择的GPU索引
-
         model_data = {}
         # 如果yaml配置文件存在，则为True
         self.config_file_exists = False
@@ -202,7 +217,11 @@ class ModelBase(object):
         if self.config_file_path is not None:
             # 询问用户是否从文件中读取训练选项
             self.read_from_conf = (
-                io.input_bool(f"您是否从文件中读取训练选项？", True, "从配置文件中读取选项，而不是逐个询问每个选项")
+                io.input_bool(
+                    f"您是否从文件中读取训练选项？",
+                    True,
+                    "从配置文件中读取选项，而不是逐个询问每个选项",
+                )
                 if not silent_start
                 else True
             )
@@ -229,6 +248,13 @@ class ModelBase(object):
             # 从文件中读取并解析模型数据
             model_data = pickle.loads(self.model_data_path.read_bytes())
             self.iter = model_data.get("iter", 0)
+            try:
+                self.author_name = model_data.get("author_name", "神农汉化")
+            except KeyError:
+                # 如果取值失败，忽略错误并将属性设置为 "神农汉化"
+                print(f"读取作者名失败，模型是从旧版DFL升级")
+                self.author_name = "神农汉化"
+
             # 如果迭代次数不为0，表示模型非首次运行
             if self.iter != 0:
                 # 如果用户选择不从yaml文件读取选项，则从.dat文件中读取选项
@@ -249,7 +275,8 @@ class ModelBase(object):
                 self.reset_training = io.input_bool(
                     "您是否要重置迭代计数器和损失图表？",
                     False,
-                    "重置模型的迭代计数器和损失图表，但您的模型不会失去训练进度。" "如果您总是使用同一个模型进行多次训练，这会很有用。",
+                    "重置模型的迭代计数器和损失图表，但您的模型不会失去训练进度。"
+                    "如果您总是使用同一个模型进行多次训练，这会很有用。",
                 )
 
                 if self.reset_training:
@@ -327,7 +354,7 @@ class ModelBase(object):
             self.save_config_file(self.config_file_path)
 
         # 从选项中获取各种配置参数
-        self.session_name = self.options.get("session_name", "")
+        # self.author_name = self.options.get("author_name", "")
         self.autobackup_hour = self.options.get("autobackup_hour", 0)
         self.maximum_n_backups = self.options.get("maximum_n_backups", 24)
         self.write_preview_history = self.options.get("write_preview_history", False)
@@ -473,35 +500,39 @@ class ModelBase(object):
         return v
 
     def ask_override(self):
-        # 设置延迟时间，如果在Colab环境中为5秒，否则为2秒
-        time_delay = 5 if io.is_colab() else 2
+        # 设置延迟时间，如果在Colab环境中为5秒，否则为10秒
+        time_delay = 5 if io.is_colab() else 10
         # 如果处于训练状态且不是首次运行，询问用户是否覆盖模型设置
         return (
             self.is_training
             and not self.is_first_run()
-            and io.input_in_time(f"在{time_delay}秒内按Enter键修改模型设置。", time_delay)
+            and io.input_in_time(
+                f"在{time_delay}秒内按Enter键修改模型设置。", time_delay
+            )
         )
 
-    def ask_session_name(self, default_value=""):
-        # 加载session_name选项，如果不存在则使用默认值
-        default_session_name = self.options["session_name"] = self.load_or_def_option(
-            "session_name", default_value
+    def ask_author_name(self, default_value="神农汉化"):
+        """
+        # 加载author_name选项，如果不存在则使用默认值
+        default_author_name = self.options["author_name"] = self.load_or_def_option(
+            "author_name", default_value
         )
-        # 询问用户输入session名
-        self.options["session_name"] = io.input_str(
-            "会话名称 Session_name",
-            default_session_name,
-            help_message="用于在summary.txt和autobackup文件夹名中引用的字符串",
+        """
+        # 询问用户输入名
+        self.author_name = io.input_str(
+            "模型作者 Author name",
+            "神农汉化",
+            help_message="显示的作者署名",
         )
 
     def ask_autobackup_hour(self, default_value=0):
         # 加载autobackup_hour选项，如果不存在则使用默认值
-        default_autobackup_hour = self.options[
-            "autobackup_hour"
-        ] = self.load_or_def_option("autobackup_hour", default_value)
+        default_autobackup_hour = self.options["autobackup_hour"] = (
+            self.load_or_def_option("autobackup hour", default_value)
+        )
         # 询问用户输入自动备份的时间间隔
         self.options["autobackup_hour"] = io.input_int(
-            f"每N小时自动备份 Autobackup_hour",
+            f"每N小时自动备份 Autobackup hour",
             default_autobackup_hour,
             add_info="0..24",
             help_message="每N小时自动备份模型文件和预览图。最新的备份是按名称升序排列时位于model/<>_autobackups的最后一个文件夹",
@@ -509,12 +540,12 @@ class ModelBase(object):
 
     def ask_maximum_n_backups(self, default_value=24):
         # 加载maximum_n_backups选项，如果不存在则使用默认值
-        default_maximum_n_backups = self.options[
-            "maximum_n_backups"
-        ] = self.load_or_def_option("maximum_n_backups", default_value)
+        default_maximum_n_backups = self.options["maximum_n_backups"] = (
+            self.load_or_def_option("maximum_n_backups", default_value)
+        )
         # 询问用户输入最大备份数量
         self.options["maximum_n_backups"] = io.input_int(
-            f"最大备份数量 Maximum_n_backups",
+            f"最大备份数量 Maximum n backups",
             default_maximum_n_backups,
             help_message="位于model/<>_autobackups中的最大备份数量。输入0将允许它根据发生次数进行任意次数的自动备份。",
         )
@@ -526,14 +557,16 @@ class ModelBase(object):
         )
         # 询问用户是否写入预览历史
         self.options["write_preview_history"] = io.input_bool(
-            f"记录预览图演变史 Write_preview_history",
+            f"记录预览图演变史 Write preview history",
             default_write_preview_history,
             help_message="预览图演变史将被写入<ModelName>_history文件夹。",
         )
 
         if self.options["write_preview_history"]:
             if io.is_support_windows():
-                self.choose_preview_history = io.input_bool("选择要记录预览的图片序号", False)
+                self.choose_preview_history = io.input_bool(
+                    "选择要记录预览的图片序号", False
+                )
             elif io.is_colab():
                 self.choose_preview_history = io.input_bool(
                     "随机选择要记录预览的图片序号",
@@ -546,7 +579,7 @@ class ModelBase(object):
         default_target_iter = self.load_or_def_option("target_iter", default_value)
         # 询问用户输入目标迭代次数
         self.options["target_iter"] = max(
-            0, io.input_int("目标迭代次数 Target_iter", default_target_iter)
+            0, io.input_int("目标迭代次数 Target iter", default_target_iter)
         )
 
     def ask_random_flip(self):
@@ -554,7 +587,7 @@ class ModelBase(object):
         default_random_flip = self.load_or_def_option("random_flip", True)
         # 询问用户是否随机翻转脸部
         self.options["random_flip"] = io.input_bool(
-            "随机翻转脸部 Random_flip",
+            "随机翻转脸部 Random flip",
             default_random_flip,
             help_message="预测的脸部看起来更自然，但src脸部集应覆盖所有与dst脸部集相同的方向。",
         )
@@ -564,7 +597,7 @@ class ModelBase(object):
         default_random_src_flip = self.load_or_def_option("random_src_flip", False)
         # 询问用户是否随机翻转SRC脸部
         self.options["random_src_flip"] = io.input_bool(
-            "随机翻转SRC脸部 Random_src_flip",
+            "随机翻转SRC脸部 Random src flip",
             default_random_src_flip,
             help_message="随机水平翻转SRC脸部集。覆盖更多角度，但脸部可能看起来不太自然。",
         )
@@ -574,7 +607,7 @@ class ModelBase(object):
         default_random_dst_flip = self.load_or_def_option("random_dst_flip", True)
         # 询问用户是否随机翻转DST脸部
         self.options["random_dst_flip"] = io.input_bool(
-            "随机翻转DST脸部 Random_dst_flip",
+            "随机翻转DST脸部 Random dst flip",
             default_random_dst_flip,
             help_message="随机水平翻转DST脸部集。如果src随机翻转未启用，则使src->dst的泛化更好。",
         )
@@ -588,7 +621,7 @@ class ModelBase(object):
         batch_size = max(
             0,
             io.input_int(
-                "批处理大小 Batch_size",
+                "批处理大小 Batch size",
                 default_batch_size,
                 valid_range=range,
                 help_message="更大的批处理大小有助于神经网络的泛化，但可能导致内存溢出错误。请手动调整以适应您的显卡。",
@@ -607,7 +640,7 @@ class ModelBase(object):
         )
         # 询问用户是否重新训练高损失样本
         self.options["retraining_samples"] = io.input_bool(
-            "重新训练高损失样本 Retraining_samples",
+            "重新训练高损失样本 Retraining samples",
             default_retraining_samples,
             help_message="定期重新训练最后16个高损失样本",
         )
@@ -714,6 +747,7 @@ class ModelBase(object):
         # 准备保存的模型数据
         model_data = {
             "iter": self.iter,
+            "author_name": self.author_name,
             "options": self.options,
             "loss_history": self.loss_history,
             "sample_for_preview": self.sample_for_preview,
@@ -782,7 +816,7 @@ class ModelBase(object):
         data = {}
         try:
             # 打开文件并读取数据
-            with open(filepath, "r") as file, open(
+            with open(filepath, "r", encoding="utf-8") as file, open(
                 self.get_config_schema_path(), "r"
             ) as schema:
                 data = yaml.safe_load(file)
@@ -812,11 +846,20 @@ class ModelBase(object):
         # 更新字典并保存
         for key, value in self.options.items():
             if not self.__update_nested_dict(formatted_dict, key, value):
-                print(f"'{key}' 未在配置文件中保存")
+                pass
+                # print(f"'{key}' 未在配置文件中保存")
 
         try:
-            with open(filepath, "w") as file:
-                yaml.dump(formatted_dict, file, sort_keys=False)
+            with open(filepath, "w", encoding="utf-8") as file:
+                yaml.dump(
+                    formatted_dict,
+                    file,
+                    Dumper=yaml.SafeDumper,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                    encoding="utf-8",
+                    sort_keys=False,
+                )
         except OSError as exception:
             io.log_info("无法写入YAML配置文件 -> ", exception)
 
@@ -835,8 +878,11 @@ class ModelBase(object):
         bckp_filename_list += [str(self.get_summary_path()), str(self.model_data_path)]
 
         # 创建新备份
-        session_suffix = f"_{self.session_name}" if self.session_name else ""
-        idx_str = datetime.datetime.now().strftime("%Y%m%dT%H%M%S") + session_suffix
+        idx_str = (
+            datetime.datetime.now().strftime("%Y_%m%d_%H_%M_%S_")
+            + str(self.iter // 1000)
+            + "k"
+        )
         idx_backup_path = self.autobackups_path / idx_str
         idx_backup_path.mkdir()
         for filename in bckp_filename_list:
@@ -968,6 +1014,10 @@ class ModelBase(object):
         # 获取当前迭代次数
         return self.iter
 
+    def get_author_name(self):
+        # 获取当前迭代次数
+        return self.author_name
+
     def set_iter(self, iter):
         # 设置迭代次数并更新损失历史
         self.iter = iter
@@ -1018,9 +1068,11 @@ class ModelBase(object):
 
     def get_summary_text(self, reduce_clutter=False):
         # 生成模型超参数的文本摘要
+        # visible_options 是显示出来的，不一定是全部，也不影响本次训练
         visible_options = self.options.copy()
+        # 参数覆写，用新的局部字典（不需要完整）刷新原字典的对应键值，可增可改
         visible_options.update(self.options_show_override)
-
+        """
         # 处理random_shadow_src和random_shadow_dst选项
         if all(
             any(i in j for j in visible_options.keys())
@@ -1037,73 +1089,185 @@ class ModelBase(object):
                     if "enabled" in opt.keys():
                         visible_options["random_shadow_dst"] = opt["enabled"]
                         break
+        """
 
-        # 根据选项的键名和值的长度，计算列宽
-        width_name = (
-            max([len(k) for k in visible_options.keys()] + [17]) + 1
-        )  # 至少为17，即"Current iteration"的长度
-        width_value = (
-            max(
-                [len(str(x)) for x in visible_options.values()]
-                + [len(str(self.get_iter())), len(self.get_model_name())]
-            )
-            + 1
+
+        # 创建一个空表格对象，并指定列名
+        table = PrettyTable(
+            ["模型摘要", "增强选项", "开关", "参数设置", "数值", "本机配置"]
         )
-        if len(self.device_config.devices) != 0:
-            width_value = max(
-                [len(device.name) + 1 for device in self.device_config.devices]
-                + [width_value]
-            )
-        width_total = width_name + width_value + 2  # 加2是为了包含": "
 
-        # 构造摘要文本
-        summary_text = []
-        summary_text += [f'=={" Model Summary ":=^{width_total}}==']
-        summary_text += [f'=={" "*width_total}==']
-        summary_text += [
-            f'=={"Model name": >{width_name}}: {self.get_model_name(): <{width_value}}=='
-        ]
-        summary_text += [f'=={" "*width_total}==']
-        summary_text += [
-            f'=={"Current iteration": >{width_name}}: {str(self.get_iter()): <{width_value}}=='
-        ]
-        summary_text += [f'=={" "*width_total}==']
-
-        summary_text += [f'=={" Model Options ":-^{width_total}}==']
-        summary_text += [f'=={" "*width_total}==']
-        for key in visible_options.keys():
-            if reduce_clutter:
-                if str(visible_options[key]) not in ["none", "n", "False"]:
-                    summary_text += [
-                        f"=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=="
-                    ]
-            else:
-                summary_text += [
-                    f"=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=="
-                ]
-        summary_text += [f'=={" "*width_total}==']
-
-        summary_text += [f'=={" Running On ":-^{width_total}}==']
-        summary_text += [f'=={" "*width_total}==']
-        if len(self.device_config.devices) == 0:
-            summary_text += [
-                f'=={"Using device": >{width_name}}: {"CPU": <{width_value}}=='
+        # 添加数据行
+        table.add_row(
+            [
+                "",
+                "重新训练高损失样本:",
+                str(self.options["retraining_samples"]),
+                "批处理大小:",
+                str(self.batch_size),
+                "AdaBelief优化器:"+str(self.options["adabelief"]),
             ]
-        else:
-            for device in self.device_config.devices:
-                summary_text += [
-                    f'=={"Device index": >{width_name}}: {device.index: <{width_value}}=='
-                ]
-                summary_text += [
-                    f'=={"Name": >{width_name}}: {device.name: <{width_value}}=='
-                ]
-                vram_str = f"{device.total_mem_gb:.2f}GB"
-                summary_text += [
-                    f'=={"VRAM": >{width_name}}: {vram_str: <{width_value}}=='
-                ]
-        summary_text += [f'=={" "*width_total}==']
-        summary_text += [f'=={"="*width_total}==']
-        summary_text = "\n".join(summary_text)
+        )
+        table.add_row(
+            [
+                "模型名称:" + self.get_model_name(),
+                "随机翻转SRC:",
+                str(self.options["random_src_flip"]),
+                "",
+                "",
+                "优化器放到GPU上"+str(self.options["models_opt_on_gpu"]),
+            ]
+        )
+        table.add_row(
+            [
+                "模型作者:" + self.get_author_name(),
+                "随机翻转DST:",
+                str(self.options["random_dst_flip"]),
+                "学习率",
+                str(self.options["lr"]),
+                "",
+            ]
+        )
+        table.add_row(
+            [
+                "",
+                "遮罩训练",
+                str(self.options["masked_training"]),
+                "真脸(src)强度",
+                str(self.options["true_face_power"]),
+                "",
+            ]
+        )       
+        table.add_row(
+            [
+                "迭代数:" + str(self.get_iter()),
+                "眼睛优先",
+                str(self.options["eyes_prio"]),
+                "背景(src)强度",
+                str(self.options["background_power"]),
+                "目标迭代次数:" + str(self.options["target_iter"]),
+            ]
+        )
+        table.add_row(
+            [
+                "模型架构:" + str(self.options["archi"]),
+                "嘴巴优先",
+                str(self.options["mouth_prio"]),
+                "人脸(dst)强度",
+                str(self.options["face_style_power"]),
+                "",
+            ]
+        )
+        table.add_row(
+            [
+                "",
+                "侧脸优化",
+                str(self.options["uniform_yaw"]),
+                "背景(dst)强度",
+                str(self.options["bg_style_power"]),
+                "",
+            ]
+        )    
+        table.add_row(
+            [
+                "分辨率:" + str(self.options["resolution"]),
+                "遮罩边缘模糊",
+                str(self.options["blur_out_mask"]),
+                "色彩转换模式",
+                str(self.options["ct_mode"]),
+                "启用梯度裁剪"+str(self.options["clipgrad"]),
+            ]
+        )
+        table.add_row(
+            [
+                "自动编码器(ae_dims):" + str(self.options["ae_dims"]),
+                "使用学习率下降",
+                str(self.options["lr_dropout"]),
+                "",
+                "",
+                "",
+            ]
+        )
+        table.add_row(
+            [
+                "编码器(e_dims):" + str(self.options["e_dims"]),
+                "随机扭曲",
+                str(self.options["random_warp"]),
+                "Loss function",
+                str(self.options["loss_function"]),
+                "",
+            ]
+        )
+        table.add_row(
+            [
+                "解码器(d_dims):" +  str(self.options["d_dims"]),
+                "随机颜色(hsv微变)",
+                str(self.options["random_hsv_power"]),
+                "",
+                "",
+                "记录预览图演变史:" + str(self.options["write_preview_history"]),
+            ]
+        )      
+        table.add_row(
+            [
+                "解码器遮罩(d_mask):" +  str(self.options["d_dims"]),
+                "随机颜色(亮度不变)",
+                str(self.options["random_color"]),
+                "gan_power",
+                str(self.options["gan_power"]),
+                "",
+            ]
+        )   
+        table.add_row(
+            [
+                "",
+                "随机降低采样",
+                str(self.options["random_downsample"]),
+                "gan_patch_size",
+                str(self.options["gan_patch_size"]),
+                "",
+            ]
+        )   
+        table.add_row(
+            [
+                "",
+                "随机添加噪音",
+                str(self.options["random_noise"]),
+                "gan_dims",
+                str(self.options["gan_dims"]),
+                "自动备份间隔:" + str(self.options["autobackup_hour"]) + " 小时",
+            ]
+        )      
+        table.add_row(
+            [
+                "",
+                "随机产生模糊",
+                str(self.options["random_blur"]),
+                "gan_smoothing",
+                str(self.options["gan_smoothing"]),
+                "最大备份数量:" + str(self.options["maximum_n_backups"]),
+            ]
+        )           
+        table.add_row(
+            [
+                "预训练模式:" +  str(self.options["d_dims"]),
+                "随机压缩jpeg",
+                str(self.options["random_jpeg"]),
+                "gan_noise",
+                str(self.options["gan_noise"]),
+                "",
+            ]
+        )    
+        # 设置对齐方式（可选）["模型摘要", "增强选项", "开关", "参数设置", "数值", "本机配置"]
+        table.align["模型摘要"] = "l"  # 左对齐
+        table.align["增强选项"] = "r"  # 居中对齐
+        table.align["开关"] = "l"  # 居中对齐
+        table.align["参数设置"] = "r"  # 居中对齐
+        table.align["数值"] = "l"  # 居中对齐
+        table.align["本机配置"] = "r"  # 居中对齐
+        # 打印表格
+        summary_text = table.get_string()
+        
         return summary_text
 
     @staticmethod
