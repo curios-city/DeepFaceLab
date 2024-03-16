@@ -1250,7 +1250,7 @@ class ModelBase(object):
         )           
         table.add_row(
             [
-                "预训练模式:" +  str(self.options["d_dims"]),
+                "预训练模式:" +  str(self.options["pretrain"]),
                 "随机压缩jpeg",
                 str(self.options["random_jpeg"]),
                 "gan_noise",
