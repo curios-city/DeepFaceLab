@@ -34,15 +34,16 @@ class SampleProcessor(object):
         NONE           = 0
         FULL_FACE      = 1  # mask all hull as grayscale
         EYES           = 2  # mask eyes hull as grayscale
-        FULL_FACE_EYES = 3  # eyes and mouse
+        EYES_MOUTH     = 3  # eyes and mouse
 
     class Options(object):
-        def __init__(self, random_flip = True, rotation_range=[-2,2], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
+        def __init__(self, random_flip = True, rotation_range=[-3,3], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
             self.random_flip = random_flip
             self.rotation_range = rotation_range
             self.scale_range = scale_range
             self.tx_range = tx_range
             self.ty_range = ty_range
+            #print("test super warp",self.rotation_range,self.scale_range)
 
     @staticmethod
     def process (samples, sample_process_options, output_sample_types, debug, ct_sample=None):
@@ -148,7 +149,7 @@ class SampleProcessor(object):
                             img = get_full_face_mask()
                         elif face_mask_type == SPFMT.EYES:
                             img = get_eyes_mask()
-                        elif face_mask_type == SPFMT.FULL_FACE_EYES:
+                        elif face_mask_type == SPFMT.EYES_MOUTH:
                             # sets both eyes and mouth mask parts
                             img = get_full_face_mask()
                             mask = img.copy()

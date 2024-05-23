@@ -51,9 +51,9 @@ class MEModel(ModelBase):
         default_face_type = self.options["face_type"] = self.load_or_def_option(
             "face_type", "f"
         )
-        default_models_opt_on_gpu = self.options[
-            "models_opt_on_gpu"
-        ] = self.load_or_def_option("models_opt_on_gpu", True)
+        default_models_opt_on_gpu = self.options["models_opt_on_gpu"] = (
+            self.load_or_def_option("models_opt_on_gpu", True)
+        )
 
         default_archi = self.options["archi"] = self.load_or_def_option(
             "archi", "liae-ud"
@@ -67,13 +67,13 @@ class MEModel(ModelBase):
         default_d_mask_dims = self.options["d_mask_dims"] = self.options.get(
             "d_mask_dims", None
         )
-        default_masked_training = self.options[
-            "masked_training"
-        ] = self.load_or_def_option("masked_training", True)
+        default_masked_training = self.options["masked_training"] = (
+            self.load_or_def_option("masked_training", True)
+        )
 
-        default_retraining_samples = self.options[
-            "retraining_samples"
-        ] = self.load_or_def_option("retraining_samples", False)
+        default_retraining_samples = self.options["retraining_samples"] = (
+            self.load_or_def_option("retraining_samples", False)
+        )
 
         default_eyes_prio = self.options["eyes_prio"] = self.load_or_def_option(
             "eyes_prio", False
@@ -113,12 +113,12 @@ class MEModel(ModelBase):
         default_random_warp = self.options["random_warp"] = self.load_or_def_option(
             "random_warp", True
         )
-        default_random_hsv_power = self.options[
-            "random_hsv_power"
-        ] = self.load_or_def_option("random_hsv_power", 0.0)
-        default_random_downsample = self.options[
-            "random_downsample"
-        ] = self.load_or_def_option("random_downsample", False)
+        default_random_hsv_power = self.options["random_hsv_power"] = (
+            self.load_or_def_option("random_hsv_power", 0.0)
+        )
+        default_random_downsample = self.options["random_downsample"] = (
+            self.load_or_def_option("random_downsample", False)
+        )
         default_random_noise = self.options["random_noise"] = self.load_or_def_option(
             "random_noise", False
         )
@@ -128,64 +128,25 @@ class MEModel(ModelBase):
         default_random_jpeg = self.options["random_jpeg"] = self.load_or_def_option(
             "random_jpeg", False
         )
-        
-        """
-        random_shadow_src_options = self.options[
-            "random_shadow_src"
-        ] = self.load_or_def_option("random_shadow_src", False)
-        random_shadow_dst_options = self.options[
-            "random_shadow_dst"
-        ] = self.load_or_def_option("random_shadow_dst", False)
-        """
-        '''
-        # 根据是否从配置文件读取或配置文件是否存在，设置随机阴影选项
-        if (
-            self.read_from_conf and not self.config_file_exists
-        ) or not self.read_from_conf:
-            # 检查源和目标的随机阴影选项是否为列表
-            if isinstance(random_shadow_src_options, list) and isinstance(
-                random_shadow_dst_options, list
-            ):
-                # 从列表中获取启用状态
-                for opt in random_shadow_src_options:
-                    if "enabled" in opt.keys():
-                        random_shadow_src = opt["enabled"]
-                for opt in random_shadow_dst_options:
-                    if "enabled" in opt.keys():
-                        random_shadow_dst = opt["enabled"]
+        default_super_warp = self.options["super_warp"] = self.load_or_def_option(
+            "super_warp", False
+        )
+        default_rotation_range = self.rotation_range = [-3, 3]
+        default_scale_range = self.scale_range = [-0.15, 0.15]
 
-                # 设置随机阴影选项
-                if random_shadow_src and random_shadow_dst:
-                    self.options["random_shadow"] = "all"
-                elif random_shadow_src:
-                    self.options["random_shadow"] = "src"
-                elif random_shadow_dst:
-                    self.options["random_shadow"] = "dst"
-                else:
-                    self.options["random_shadow"] = "none"
-                default_random_shadow = self.load_or_def_option("random_shadow", "none")
-            else:
-                default_random_shadow = self.options[
-                    "random_shadow"
-                ] = self.load_or_def_option("random_shadow", "none")
-
-            # 删除旧的随机阴影选项
-            del self.options["random_shadow_src"]
-            del self.options["random_shadow_dst"]
-        '''
         # 加载或定义其他训练相关的默认选项
-        default_background_power = self.options[
-            "background_power"
-        ] = self.load_or_def_option("background_power", 0.0)
-        default_true_face_power = self.options[
-            "true_face_power"
-        ] = self.load_or_def_option("true_face_power", 0.0)
-        default_face_style_power = self.options[
-            "face_style_power"
-        ] = self.load_or_def_option("face_style_power", 0.0)
-        default_bg_style_power = self.options[
-            "bg_style_power"
-        ] = self.load_or_def_option("bg_style_power", 0.0)
+        default_background_power = self.options["background_power"] = (
+            self.load_or_def_option("background_power", 0.0)
+        )
+        default_true_face_power = self.options["true_face_power"] = (
+            self.load_or_def_option("true_face_power", 0.0)
+        )
+        default_face_style_power = self.options["face_style_power"] = (
+            self.load_or_def_option("face_style_power", 0.0)
+        )
+        default_bg_style_power = self.options["bg_style_power"] = (
+            self.load_or_def_option("bg_style_power", 0.0)
+        )
         default_ct_mode = self.options["ct_mode"] = self.load_or_def_option(
             "ct_mode", "none"
         )
@@ -201,12 +162,12 @@ class MEModel(ModelBase):
         default_cpu_cap = self.options["cpu_cap"] = self.load_or_def_option(
             "cpu_cap", 8
         )
-        default_preview_samples = self.options[
-            "preview_samples"
-        ] = self.load_or_def_option("preview_samples", 4)
-        default_full_preview = self.options[
-            "force_full_preview"
-        ] = self.load_or_def_option("force_full_preview", False)
+        default_preview_samples = self.options["preview_samples"] = (
+            self.load_or_def_option("preview_samples", 4)
+        )
+        default_full_preview = self.options["force_full_preview"] = (
+            self.load_or_def_option("force_full_preview", False)
+        )
         default_lr = self.options["lr"] = self.load_or_def_option("lr", 5e-5)
 
         # 判断是否需要覆盖模型设置
@@ -230,10 +191,12 @@ class MEModel(ModelBase):
                     16,
                 )
                 self.options["force_full_preview"] = io.input_bool(
-                    "使用旧的预览面板", default_full_preview
+                    "强制不分离预览", default_full_preview,
+                    help_message="遇到大分辨率也会展开五列",
                 )
 
                 # 获取其他训练相关配置
+                self.ask_reset_training()
                 self.ask_target_iter()
                 self.ask_retraining_samples(default_retraining_samples)
                 self.ask_random_src_flip()
@@ -339,7 +302,7 @@ class MEModel(ModelBase):
             )
             # 作者签名
             self.ask_author_name()
-            
+
         # 首次运行时获取AutoEncoder、Encoder和Decoder的维度配置
         if self.is_first_run():
             if (
@@ -440,9 +403,9 @@ class MEModel(ModelBase):
         default_gan_power = self.options["gan_power"] = self.load_or_def_option(
             "gan_power", 0.0
         )
-        default_gan_patch_size = self.options[
-            "gan_patch_size"
-        ] = self.load_or_def_option("gan_patch_size", self.options["resolution"] // 8)
+        default_gan_patch_size = self.options["gan_patch_size"] = (
+            self.load_or_def_option("gan_patch_size", self.options["resolution"] // 8)
+        )
         default_gan_dims = self.options["gan_dims"] = self.load_or_def_option(
             "gan_dims", 16
         )
@@ -525,14 +488,25 @@ class MEModel(ModelBase):
                     default_random_jpeg,
                     help_message="通过对某些样本应用 jpeg 压缩的质量降级来挑战模型",
                 )
-                '''
+
+                self.options["super_warp"] = io.input_bool(
+                    "启用样本超级扭曲 Enable super warp of samples",
+                    default_super_warp,
+                    help_message="大多数时候不要开启，占用更多时间和空间。只有dst有夸张大幅度表情，而src无对应表情时，可以尝试增大计算量以求融合。或许搭配嘴巴优先 Mouth priority更有针对性！",
+                )
+
+                # if self.options["super_warp"] == True:
+                # self.rotation_range=[-15,15]
+                # self.scale_range=[-0.25, 0.25]
+
+                """
                 self.options["random_shadow"] = io.input_str(
                     "启用对样本的随机阴影和高光 Enable random shadows and highlights of samples",
                     default_random_shadow,
                     ["none", "src", "dst", "all"],
                     help_message="有助于在数据集中创建暗光区域。如果你的src数据集缺乏阴影/不同的光照情况；使用dst以帮助泛化；或者使用all以满足两者的需求",
                 )
-                '''
+                """
                 self.options["gan_power"] = np.clip(
                     io.input_number(
                         "GAN强度 GAN power",
@@ -727,11 +701,13 @@ class MEModel(ModelBase):
         use_fp16 = self.options["use_fp16"]
         if self.is_exporting:
             use_fp16 = io.input_bool(
-                "Export quantized?", False, help_message="使导出的模型更快。如果遇到问题，请禁用此选项。"
+                "Export quantized?",
+                False,
+                help_message="使导出的模型更快。如果遇到问题，请禁用此选项。",
             )
 
-        # 设置相关参数 （已解锁预训练的所有锁定）
-        self.gan_power = gan_power = self.options["gan_power"]
+        # 设置相关参数 （已解锁预训练的所有锁定，除了GAN）
+        self.gan_power = gan_power = 0.0 if self.pretrain else self.options["gan_power"]
         random_warp = self.options["random_warp"]
         random_src_flip = self.random_src_flip
         random_dst_flip = self.random_dst_flip
@@ -750,7 +726,7 @@ class MEModel(ModelBase):
         if ct_mode == "none":
             ct_mode = None
 
-        '''
+        """
         # 根据配置文件的使用情况设置随机阴影源和目标
         if (
             self.read_from_conf and not self.config_file_exists
@@ -768,7 +744,7 @@ class MEModel(ModelBase):
         else:
             random_shadow_src = self.options["random_shadow_src"]
             random_shadow_dst = self.options["random_shadow_dst"]
-        '''
+        """
 
         # 设置模型优化选项
         models_opt_on_gpu = (
@@ -992,7 +968,9 @@ class MEModel(ModelBase):
         if self.is_training:
             # 调整多GPU环境下的批处理大小
             gpu_count = max(1, len(devices))  # 获取GPU数量，至少为1
-            bs_per_gpu = max(1, self.get_batch_size() // gpu_count)  # 每个GPU的批处理大小，至少为1
+            bs_per_gpu = max(
+                1, self.get_batch_size() // gpu_count
+            )  # 每个GPU的批处理大小，至少为1
             self.set_batch_size(gpu_count * bs_per_gpu)  # 设置总的批处理大小
 
             # 计算每个GPU的损失
@@ -1118,11 +1096,15 @@ class MEModel(ModelBase):
                             tf.stop_gradient(gpu_src_dst_code)
                         )
 
-                    gpu_pred_src_src_list.append(gpu_pred_src_src)  # 将GPU预测的源到源结果添加到列表
+                    gpu_pred_src_src_list.append(
+                        gpu_pred_src_src
+                    )  # 将GPU预测的源到源结果添加到列表
                     gpu_pred_dst_dst_list.append(
                         gpu_pred_dst_dst
                     )  # 将GPU预测的目标到目标结果添加到列表
-                    gpu_pred_src_dst_list.append(gpu_pred_src_dst)  # 将GPU预测的源到目标结果添加到列表
+                    gpu_pred_src_dst_list.append(
+                        gpu_pred_src_dst
+                    )  # 将GPU预测的源到目标结果添加到列表
 
                     gpu_pred_src_srcm_list.append(
                         gpu_pred_src_srcm
@@ -1183,7 +1165,9 @@ class MEModel(ModelBase):
                     gpu_style_mask_blur = tf.stop_gradient(
                         tf.clip_by_value(gpu_target_srcm_blur, 0, 1.0)
                     )
-                    gpu_style_mask_anti_blur = 1.0 - gpu_style_mask_blur  # 反向模糊处理风格掩码
+                    gpu_style_mask_anti_blur = (
+                        1.0 - gpu_style_mask_blur
+                    )  # 反向模糊处理风格掩码
 
                     gpu_target_dst_masked = (
                         gpu_target_dst * gpu_target_dstm_blur
@@ -1928,7 +1912,9 @@ class MEModel(ModelBase):
             # 获取CPU核心数，但不超过设定的上限
             cpu_count = min(multiprocessing.cpu_count(), self.options["cpu_cap"])
             src_generators_count = cpu_count // 2  # 源数据生成器的数量为CPU核心数的一半
-            dst_generators_count = cpu_count // 2  # 目标数据生成器的数量也是CPU核心数的一半
+            dst_generators_count = (
+                cpu_count // 2
+            )  # 目标数据生成器的数量也是CPU核心数的一半
             if ct_mode is not None:
                 src_generators_count = int(
                     src_generators_count * 1.5
@@ -1965,6 +1951,7 @@ class MEModel(ModelBase):
             elif self.pretrain:
                 self.src_pak_name = self.dst_pak_name = "faceset"
 
+            # print("test super warp",self.rotation_range,self.scale_range)
             self.set_training_data_generators(
                 [
                     SampleGeneratorFace(
@@ -1975,7 +1962,9 @@ class MEModel(ModelBase):
                         debug=self.is_debug(),
                         batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(
-                            scale_range=[-0.15, 0.15], random_flip=random_src_flip
+                            rotation_range=self.rotation_range,
+                            scale_range=self.scale_range,
+                            random_flip=random_src_flip,
                         ),
                         output_sample_types=[
                             {
@@ -2036,7 +2025,9 @@ class MEModel(ModelBase):
                         debug=self.is_debug(),
                         batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(
-                            scale_range=[-0.15, 0.15], random_flip=random_dst_flip
+                            rotation_range=self.rotation_range,
+                            scale_range=self.scale_range,
+                            random_flip=random_src_flip,
                         ),
                         output_sample_types=[
                             {
@@ -2151,7 +2142,7 @@ class MEModel(ModelBase):
         with tf.device("/CPU:0"):
             model_proto, _ = tf2onnx.convert._convert_common(
                 output_graph_def,
-                name="SAEHD",
+                name="SAEHD512",
                 input_names=["in_face:0"],
                 output_names=[
                     "out_face_mask:0",
@@ -2306,7 +2297,7 @@ class MEModel(ModelBase):
                 ar = S[i], SS[i], D[i], DD[i], SD[i]
                 st.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD", np.concatenate(st, axis=0)),
+                ("SN", np.concatenate(st, axis=0)),
             ]
 
             wt = []
@@ -2314,7 +2305,7 @@ class MEModel(ModelBase):
                 ar = SW[i], SS[i], DW[i], DD[i], SD[i]
                 wt.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD warped", np.concatenate(wt, axis=0)),
+                ("SN warped", np.concatenate(wt, axis=0)),
             ]
 
             st_m = []
@@ -2329,7 +2320,7 @@ class MEModel(ModelBase):
                 st_m.append(np.concatenate(ar, axis=1))
 
             result += [
-                ("SAEHD masked", np.concatenate(st_m, axis=0)),
+                ("SN masked", np.concatenate(st_m, axis=0)),
             ]
         else:
             result = []
@@ -2339,7 +2330,7 @@ class MEModel(ModelBase):
                 ar = S[i], SS[i]
                 st.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD src-src", np.concatenate(st, axis=0)),
+                ("SN src-src", np.concatenate(st, axis=0)),
             ]
 
             st = []
@@ -2347,7 +2338,7 @@ class MEModel(ModelBase):
                 ar = D[i], DD[i]
                 st.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD dst-dst", np.concatenate(st, axis=0)),
+                ("SN dst-dst", np.concatenate(st, axis=0)),
             ]
 
             st = []
@@ -2355,7 +2346,7 @@ class MEModel(ModelBase):
                 ar = D[i], SD[i]
                 st.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD pred", np.concatenate(st, axis=0)),
+                ("SN pred", np.concatenate(st, axis=0)),
             ]
 
             wt = []
@@ -2363,7 +2354,7 @@ class MEModel(ModelBase):
                 ar = SW[i], SS[i]
                 wt.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD warped src-src", np.concatenate(wt, axis=0)),
+                ("SN warped src-src", np.concatenate(wt, axis=0)),
             ]
 
             wt = []
@@ -2371,7 +2362,7 @@ class MEModel(ModelBase):
                 ar = DW[i], DD[i]
                 wt.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD warped dst-dst", np.concatenate(wt, axis=0)),
+                ("SN warped dst-dst", np.concatenate(wt, axis=0)),
             ]
 
             wt = []
@@ -2379,7 +2370,7 @@ class MEModel(ModelBase):
                 ar = DW[i], SD[i]
                 wt.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD warped pred", np.concatenate(wt, axis=0)),
+                ("SN warped pred", np.concatenate(wt, axis=0)),
             ]
 
             st_m = []
@@ -2387,7 +2378,7 @@ class MEModel(ModelBase):
                 ar = S[i] * target_srcm[i], SS[i] * SSM[i]
                 st_m.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD masked src-src", np.concatenate(st_m, axis=0)),
+                ("SN masked src-src", np.concatenate(st_m, axis=0)),
             ]
 
             st_m = []
@@ -2395,7 +2386,7 @@ class MEModel(ModelBase):
                 ar = D[i] * target_dstm[i], DD[i] * DDM[i]
                 st_m.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD masked dst-dst", np.concatenate(st_m, axis=0)),
+                ("SN masked dst-dst", np.concatenate(st_m, axis=0)),
             ]
 
             st_m = []
@@ -2404,7 +2395,7 @@ class MEModel(ModelBase):
                 ar = D[i] * target_dstm[i], SD[i] * SD_mask
                 st_m.append(np.concatenate(ar, axis=1))
             result += [
-                ("SAEHD masked pred", np.concatenate(st_m, axis=0)),
+                ("SN masked pred", np.concatenate(st_m, axis=0)),
             ]
 
         return result
@@ -2450,8 +2441,12 @@ class MEModel(ModelBase):
         import multiprocessing as mp
 
         # 生成训练状态
-        src_gen = self.generator_list[0]  # 获取生成器列表中的第一个生成器对象，赋值给变量src_gen
-        dst_gen = self.generator_list[1]  # 获取生成器列表中的第二个生成器对象，赋值给变量dst_gen
+        src_gen = self.generator_list[
+            0
+        ]  # 获取生成器列表中的第一个生成器对象，赋值给变量src_gen
+        dst_gen = self.generator_list[
+            1
+        ]  # 获取生成器列表中的第二个生成器对象，赋值给变量dst_gen
         self.src_sample_state = []  # 初始化变量self.src_sample_state为空列表
         self.dst_sample_state = []  # 初始化变量self.dst_sample_state为空列表
 
@@ -2475,7 +2470,9 @@ class MEModel(ModelBase):
             # 在状态历史记录路径下创建新目录
         # create state folder
         idx_str = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")  # 获取当前时间戳
-        idx_state_history_path = self.state_history_path / idx_str  # 获取状态历史记录路径
+        idx_state_history_path = (
+            self.state_history_path / idx_str
+        )  # 获取状态历史记录路径
         idx_state_history_path.mkdir()  # 创建状态历史记录路径
         # create set folders
         self.src_state_path = (
@@ -2515,12 +2512,12 @@ class MEModel(ModelBase):
         # copy model summary
         # model_summary = self.options.copy()
         model_summary = {}  # 创建一个空字典，用于存储模型摘要信息
-        model_summary[
-            "iter"
-        ] = self.get_iter()  # 获取当前迭代次数，并将其作为"iter"键的值存储到model_summary字典中
-        model_summary[
-            "name"
-        ] = self.get_model_name()  # 获取模型名称，并将其作为"name"键的值存储到model_summary字典中
+        model_summary["iter"] = (
+            self.get_iter()
+        )  # 获取当前迭代次数，并将其作为"iter"键的值存储到model_summary字典中
+        model_summary["name"] = (
+            self.get_model_name()
+        )  # 获取模型名称，并将其作为"name"键的值存储到model_summary字典中
 
         # error with some types, need to double check
         with open(idx_state_history_path / "model_summary.json", "w") as outfile:
@@ -2619,16 +2616,32 @@ class MEModel(ModelBase):
             pred_dst_dst,  # 目标图像预测的目标图像
             pred_dst_dstm,  # 目标图像预测的目标图像强度变化
             pred_src_dst,  # 源图像预测的目标图像
-            pred_src_dstm  # 源图像预测的目标图像强度变化
+            pred_src_dstm,  # 源图像预测的目标图像强度变化
         ) = self.get_src_dst_information(  # 调用get_src_dst_information方法获取源图像和目标图像的相关信息
-            data_format_change(src_sample_bgr),  # 调用data_format_change方法改变源图像颜色通道的顺序
-            data_format_change(src_sample_bgr),  # 调用data_format_change方法改变源图像颜色通道的顺序
-            data_format_change(src_sample_mask),  # 调用data_format_change方法改变源图像掩码的通道顺序
-            data_format_change(src_sample_mask_em),  # 调用data_format_change方法改变源图像掩码能量的通道顺序
-            data_format_change(dst_sample_bgr),  # 调用data_format_change方法改变目标图像颜色通道的顺序
-            data_format_change(dst_sample_bgr),  # 调用data_format_change方法改变目标图像颜色通道的顺序
-            data_format_change(dst_sample_mask),  # 调用data_format_change方法改变目标图像掩码的通道顺序
-            data_format_change(dst_sample_mask_em)  # 调用data_format_change方法改变目标图像掩码能量的通道顺序
+            data_format_change(
+                src_sample_bgr
+            ),  # 调用data_format_change方法改变源图像颜色通道的顺序
+            data_format_change(
+                src_sample_bgr
+            ),  # 调用data_format_change方法改变源图像颜色通道的顺序
+            data_format_change(
+                src_sample_mask
+            ),  # 调用data_format_change方法改变源图像掩码的通道顺序
+            data_format_change(
+                src_sample_mask_em
+            ),  # 调用data_format_change方法改变源图像掩码能量的通道顺序
+            data_format_change(
+                dst_sample_bgr
+            ),  # 调用data_format_change方法改变目标图像颜色通道的顺序
+            data_format_change(
+                dst_sample_bgr
+            ),  # 调用data_format_change方法改变目标图像颜色通道的顺序
+            data_format_change(
+                dst_sample_mask
+            ),  # 调用data_format_change方法改变目标图像掩码的通道顺序
+            data_format_change(
+                dst_sample_mask_em
+            ),  # 调用data_format_change方法改变目标图像掩码能量的通道顺序
         )
 
         if samples_tuple[0] != 0:
@@ -2642,16 +2655,16 @@ class MEModel(ModelBase):
                 [int(cv2.IMWRITE_JPEG_QUALITY), 100],
             )  # output
 
-        src_data = {
-            # 将src_loss的第一个元素转换为浮点数并赋值给loss键
-            "loss": float(src_loss[0]),
-            # 将src_file_name加上后缀.jpg并赋值给input键
-            "input": f"{src_file_name}.jpg",
-            # 将src_file_name加上后缀_output.jpg并赋值给output键
-            "output": f"{src_file_name}_output.jpg",
-        }
-        # 将src_data添加到self.src_sample_state列表中
-        self.src_sample_state.append(src_data)
+            src_data = {
+                # 将src_loss的第一个元素转换为浮点数并赋值给loss键
+                "loss": float(src_loss[0]),
+                # 将src_file_name加上后缀.jpg并赋值给input键
+                "input": f"{src_file_name}.jpg",
+                # 将src_file_name加上后缀_output.jpg并赋值给output键
+                "output": f"{src_file_name}_output.jpg",
+            }
+            # 将src_data添加到self.src_sample_state列表中
+            self.src_sample_state.append(src_data)
 
         if samples_tuple[1] != 0:
             # 获取文件名并去扩展名

@@ -47,6 +47,12 @@ def get_mouth_mask(sample_bgr, sample_landmarks):
     clip[clip > 0.1] += 2
     return clip
 
+def get_eyes_mouth_mask():                
+    eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
+    mouth_mask = LandmarksProcessor.get_image_mouth_mask (sample_bgr.shape, sample_landmarks)
+    mask = eyes_mask + mouth_mask
+    return np.clip(mask, 0, 1)
+
 def get_full_face_eyes(sample, sample_bgr, sample_landmarks):
     # sets both eyes and mouth mask parts
     img = get_full_face_mask(sample, sample_bgr, sample_landmarks)

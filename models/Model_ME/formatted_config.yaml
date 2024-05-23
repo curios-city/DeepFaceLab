@@ -49,6 +49,7 @@ random_augs:
   random_noise: false
   random_blur: false
   random_jpeg: false
+  super_warp: false
   
 #颜色增强_____________________
 color_augs:

@@ -43,7 +43,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
     @app.route('/exit', methods=['POST'])
     def exit():
         send(c2s, 'close')
-        request.environ.get('werkzeug.server.shutdown')()
+        # 由于退出整个程序，应该不需要这个权限。request.environ.get('werkzeug.server.shutdown')()
         return '', 204
 
     @app.route('/update', methods=['POST'])
@@ -81,7 +81,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
 
     @app.route('/preview_image')
     def preview_image():
-        return send_file(preview_file, mimetype='image/png', cache_timeout=-1)
+        return send_file(preview_file, mimetype='image/png')
 
     socketio = SocketIO(app)
 

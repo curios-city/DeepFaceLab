@@ -1,14 +1,14 @@
+﻿<html>
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
             integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
             crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
-            integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I="
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"
             crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
     <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
-    <title>Training Preview</title>
+    <title>神农训练预览 -- Training Preview  </title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript">
@@ -79,17 +79,17 @@
     </script>
 </head>
 <body>
-<div class="mdl-typography--headline">Training Preview</div>
-<div id="loss"></div>
-<div>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='save'>Save</button>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='exit'>Exit</button>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='update'>Update</button>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='next_preview'>Next preview</button>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='change_history_range'>Change History Range</button>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='zoom_prev'>Zoom -</button>
-    <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='zoom_next'>Zoom +</button>
-</div>
-<img id='preview' src="{{ url_for('preview_image') }}" style="max-width: 100%">
+    <div class="mdl-typography--headline">  -- 神农 训练预览 -- Training Preview --  </div>
+    <div id="loss"></div>
+    <div>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='save'>保存 Save</button>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='exit'>退出 Exit</button>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='update'>刷新 Update</button>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='next_preview'>切换 Next preview</button>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='change_history_range'>修改loss曲线范围</button>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='zoom_prev'>缩小 Zoom -</button>
+        <button class='mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect' id='zoom_next'>放大 Zoom +</button>
+    </div>
+    <img id='preview' src="{{ url_for('preview_image') }}" style="max-width: 100%">
 </body>
 </html>

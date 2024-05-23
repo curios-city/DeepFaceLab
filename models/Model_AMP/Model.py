@@ -68,8 +68,8 @@ class AMPModel(ModelBase):
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
         default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
 
-        random_shadow_src_options = self.options['random_shadow_src']   = self.load_or_def_option('random_shadow_src', False)
-        random_shadow_dst_options = self.options['random_shadow_dst']   = self.load_or_def_option('random_shadow_dst', False)
+        #random_shadow_src_options = self.options['random_shadow_src']   = self.load_or_def_option('random_shadow_src', False)
+        #random_shadow_dst_options = self.options['random_shadow_dst']   = self.load_or_def_option('random_shadow_dst', False)
 
         if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
 
@@ -111,7 +111,6 @@ class AMPModel(ModelBase):
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.ask_autobackup_hour()
-                self.ask_session_name()
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
                 self.options['preview_samples'] = np.clip ( io.input_int ("预览样本数量", default_preview_samples, add_info="1 - 16", help_message="典型的精细值为4"), 1, 16 )
@@ -197,7 +196,7 @@ class AMPModel(ModelBase):
                 self.options['random_noise'] = io.input_bool("启用在样本中随机添加噪音 Enable random noise added to samples", default_random_noise, help_message="通过在某些样本中添加噪音来挑战模型")
                 self.options['random_blur'] = io.input_bool("启用对样本的随机模糊 Enable random blur of samples", default_random_blur, help_message="通过在某些样本中添加模糊效果来挑战模型")
                 self.options['random_jpeg'] = io.input_bool("启用随机压缩jpeg样本 Enable random jpeg compression of samples", default_random_jpeg, help_message="通过对某些样本应用 jpeg 压缩的质量降级来挑战模型")
-                self.options['random_shadow'] = io.input_str('启用对样本的随机阴影和高光 Enable random shadows and highlights of samples', default_random_shadow, ['none','src','dst','all'], help_message="有助于在数据集中创建暗光区域。如果你的src数据集缺乏阴影/不同的光照情况；使用dst以帮助泛化；或者使用all以满足两者的需求")
+                #self.options['random_shadow'] = io.input_str('启用对样本的随机阴影和高光 Enable random shadows and highlights of samples', default_random_shadow, ['none','src','dst','all'], help_message="有助于在数据集中创建暗光区域。如果你的src数据集缺乏阴影/不同的光照情况；使用dst以帮助泛化；或者使用all以满足两者的需求")
                 self.options['random_hsv_power'] = np.clip ( io.input_number ("随机色调/饱和度/光强度 Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="随机色调/饱和度/光照强度仅应用于神经网络输入的src人脸集。稳定人脸交换过程中的色彩扰动。通过选择原始面孔集中最接近的面孔来降低色彩转换的质量。因此src人脸集必须足够多样化。典型的精细值为 0.05"), 0.0, 0.3 )
 
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN强度 GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="以生成对抗方式训练网络。强制神经网络学习人脸的小细节。只有当人脸训练得足够好时才启用它，否则就不要禁用。典型值为 0.1"), 0.0, 5.0 )
@@ -863,7 +862,7 @@ class AMPModel(ModelBase):
                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_shadow': random_shadow_src,
                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
                         uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain
                         generators_count=src_generators_count ),
@@ -881,7 +880,7 @@ class AMPModel(ModelBase):
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': dst_aug, 'random_shadow': random_shadow_dst,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
                         uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain,
                         generators_count=dst_generators_count )

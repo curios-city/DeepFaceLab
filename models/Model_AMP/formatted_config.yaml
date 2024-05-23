@@ -9,7 +9,6 @@ basic_param:
 model_properties:
   morph_factor: 0.5
   preview_mf: 1
-  session_name: ''
   autobackup_hour: 0
   maximum_n_backups: 24
   write_preview_history: false
@@ -50,18 +49,6 @@ augmentations:
   random_blur: false
   random_jpeg: false
   random_jpeg: false
-  random_shadow_src:
-  - enabled: false
-  - shadow_low: 0.2
-  - shadow_high: 0.6
-  - high_bright_low: 1
-  - high_bright_high: 3
-  random_shadow_dst:
-  - enabled: false
-  - shadow_low: 0.2
-  - shadow_high: 0.6
-  - high_bright_low: 1
-  - high_bright_high: 3
 color_augs:
   random_hsv_power: 0.0
   ct_mode: none

@@ -10,7 +10,7 @@ class XSegNet(object):
     VERSION = 1
 
     def __init__ (self, name, 
-                        resolution=256, 
+                        resolution=384, 
                         load_weights=True, 
                         weights_file_root=None, 
                         training=False, 
@@ -36,7 +36,7 @@ class XSegNet(object):
 
         # Initializing model classes
         with tf.device ('/CPU:0' if place_model_on_cpu else nn.tf_default_device_name):
-            self.model = nn.XSeg(3, 32, 1, name=name)
+            self.model = nn.XSeg(3, 32, 1, resolution, name=name)
             self.model_weights = self.model.get_weights()
             if training:
                 if optimizer is None:

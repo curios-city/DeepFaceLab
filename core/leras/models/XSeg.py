@@ -1,31 +1,50 @@
+# -*- coding: utf-8 -*-
+
 from core.leras import nn
 tf = nn.tf
 
 class XSeg(nn.ModelBase):
     
-    def on_build (self, in_ch, base_ch, out_ch):
+    def on_build (self, in_ch, base_ch, out_ch, resolution):
+        if resolution is None:
+            raise ValueError("请将XSeg原始模型用神农训练保存一次")
+        self.scale_ch= resolution/256
         
+        # 定义一个卷积块
         class ConvBlock(nn.ModelBase):
             def on_build(self, in_ch, out_ch):              
-                self.conv = nn.Conv2D (in_ch, out_ch, kernel_size=3, padding='SAME')
+                # 定义卷积层，输入通道数为in_ch，输出通道数为out_ch，卷积核大小为3x3，padding方式为SAME
+                self.conv = nn.Conv2D(in_ch, out_ch, kernel_size=3, padding='SAME')
+                # 定义FRN（Filter Response Normalization）归一化层，对卷积输出进行归一化
                 self.frn = nn.FRNorm2D(out_ch)
+                # 定义TLU（Thresholded Linear Unit）激活函数层，对归一化后的输出进行激活
                 self.tlu = nn.TLU(out_ch)
 
             def forward(self, x):                
+                # 执行卷积操作
                 x = self.conv(x)
+                # 对卷积输出进行FRN归一化
                 x = self.frn(x)
+                # 对归一化后的输出进行TLU激活
                 x = self.tlu(x)
                 return x
 
+        # 定义一个反卷积块
         class UpConvBlock(nn.ModelBase):
             def on_build(self, in_ch, out_ch):
-                self.conv = nn.Conv2DTranspose (in_ch, out_ch, kernel_size=3, padding='SAME')
+                # 定义反卷积层，输入通道数为in_ch，输出通道数为out_ch，卷积核大小为3x3，padding方式为SAME
+                self.conv = nn.Conv2DTranspose(in_ch, out_ch, kernel_size=3, padding='SAME')
+                # 定义FRN归一化层，对反卷积输出进行归一化
                 self.frn = nn.FRNorm2D(out_ch)
+                # 定义TLU激活函数层，对归一化后的反卷积输出进行激活
                 self.tlu = nn.TLU(out_ch)
 
             def forward(self, x):
+                # 执行反卷积操作
                 x = self.conv(x)
+                # 对反卷积输出进行FRN归一化
                 x = self.frn(x)
+                # 对归一化后的反卷积输出进行TLU激活
                 x = self.tlu(x)
                 return x
                 
@@ -58,9 +77,9 @@ class XSeg(nn.ModelBase):
         self.conv53 = ConvBlock(base_ch*8, base_ch*8)
         self.bp5 = nn.BlurPool (filt_size=2)
         
-        self.dense1 = nn.Dense ( 4*4* base_ch*8, 512)
-        self.dense2 = nn.Dense ( 512, 4*4* base_ch*8)
-                
+        self.dense1 = nn.Dense (int(4096*self.scale_ch**2), 512)
+        self.dense2 = nn.Dense ( 512,int(4096*self.scale_ch**2))
+    
         self.up5 = UpConvBlock (base_ch*8, base_ch*4)
         self.uconv53 = ConvBlock(base_ch*12, base_ch*8)
         self.uconv52 = ConvBlock(base_ch*8, base_ch*8)
@@ -92,15 +111,12 @@ class XSeg(nn.ModelBase):
         
     def forward(self, inp, pretrain=False):
         x = inp
-
         x = self.conv01(x)
         x = x0 = self.conv02(x)
         x = self.bp0(x)
-
         x = self.conv11(x)
         x = x1 = self.conv12(x)
         x = self.bp1(x)
-
         x = self.conv21(x)
         x = x2 = self.conv22(x)
         x = self.bp2(x)
@@ -123,7 +139,7 @@ class XSeg(nn.ModelBase):
         x = nn.flatten(x)
         x = self.dense1(x)
         x = self.dense2(x)
-        x = nn.reshape_4D (x, 4, 4, self.base_ch*8 )
+        x = nn.reshape_4D (x, int(4*self.scale_ch), int(4*self.scale_ch), self.base_ch*8 )
                           
         x = self.up5(x)
         if pretrain:

@@ -6,9 +6,9 @@ pil_fonts = {}
 def _get_pil_font (font, size):
     global pil_fonts
     try:
-        font_str_id = '%s_%d' % (font, size)
+        font_str_id = '%s_%d' % ("simhei", size) # …Ò≈©∫∫ªØ
         if font_str_id not in pil_fonts.keys():
-            pil_fonts[font_str_id] = ImageFont.truetype(font + ".ttf", size=size, encoding="unic")
+            pil_fonts[font_str_id] = ImageFont.truetype("simhei" + ".ttf", size=size, encoding="unic")
         pil_font = pil_fonts[font_str_id]
         return pil_font
     except:

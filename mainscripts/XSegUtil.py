@@ -1,10 +1,10 @@
 import json
+import os
+import operator
 import shutil
 import traceback
 from pathlib import Path
-
 import numpy as np
-
 from core import pathex
 from core.cv2ex import *
 from core.interact import interact as io
@@ -31,14 +31,69 @@ def apply_xseg(input_path, model_path):
         
     face_type = None
     
-    model_dat = model_path / 'XSeg_data.dat'
+    # 收集所有模型数据文件的名称和最后修改时间
+    saved_models_names = []
+    for filepath in pathex.get_file_paths(model_path):
+        filepath_name = filepath.name
+        if filepath_name.endswith(f'XSeg_data.dat'):
+            # 如果文件名以模型类名结尾，将文件名和最后修改时间添加到列表中
+            saved_models_names += [(filepath_name.split('_')[0], os.path.getmtime(filepath))]
+
+    # 按修改时间倒序排序
+    saved_models_names = sorted(saved_models_names, key=operator.itemgetter(1), reverse=True)
+    saved_models_names = [x[0] for x in saved_models_names]
+
+    # 如果有保存的模型
+    if len(saved_models_names) == 1:
+        model_name=saved_models_names[0]  #XSeg
+        
+    elif len(saved_models_names) > 1:
+
+        io.log_info("选择一个模型")
+
+        for i, model_name in enumerate(saved_models_names):
+            s = f"[{i}] : {model_name} "
+            if i == 0:
+                s += "- 上次执行"
+            io.log_info(s)
+
+        # 用户输入选择的模型索引或操作（重命名或删除）
+        inp = io.input_str(f"", "0", show_default_value=False)
+        #初始化变量
+        model_idx = -1
+        try:
+            model_idx = np.clip(int(inp), 0, len(saved_models_names) - 1)
+        except:
+            pass
+
+        if model_idx == -1:
+            #意味着用户输入的内容不能被转换为有效的整数，或者转换后的值不在合法的索引范围内
+            model_name = inp
+        else:
+            # 根据用户选择的索引设置当前模型名称
+            model_name = saved_models_names[model_idx]
+
+    else:
+        # 如果没有保存的模型，提示用户输入新模型的名称
+        print("没有发现XSeg模型, 请下载或者训练")
+
+
+    if model_name == "XSeg":
+        model_dat = model_path / ('XSeg_data.dat')
+    else:
+        model_dat = model_path / (model_name+'_XSeg_data.dat')
+        
     if model_dat.exists():
         dat = pickle.loads( model_dat.read_bytes() )
         dat_options = dat.get('options', None)
         if dat_options is not None:
             face_type = dat_options.get('face_type', None)
-        
-        
+            if model_name == "XSeg":
+                full_name= "XSeg"
+                resolution = 256
+            else:
+                resolution = dat_options.get('resolution', None)
+                full_name= model_name+'_XSeg'
         
     if face_type is None:
         face_type = io.input_str ("XSeg模型人脸类型 XSeg model face type", 'same', ['h','mf','f','wf','head','same', 'custom'], help_message="指定经过训练的XSeg模型的面部类型。例如，如果XSeg模型训练为WF，但facesset是HEAD，则指定WF仅对HEAD的WF部分应用XSeg。默认值 'same'").lower()
@@ -57,14 +112,14 @@ def apply_xseg(input_path, model_path):
 
     device_config = nn.DeviceConfig.ask_choose_device(choose_only_one=True)
     nn.initialize(device_config)
-        
-    
-    
-    xseg = XSegNet(name='XSeg', 
+
+    xseg = XSegNet(name=full_name, 
+                    resolution=resolution,
                     load_weights=True,
                     weights_file_root=model_path,
                     data_format=nn.data_format,
                     raise_on_no_model_files=True)
+    
     xseg_res = xseg.get_resolution()
               
     images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
@@ -152,7 +207,7 @@ def remove_xseg(input_path):
     
     io.log_info(f'处理文件夹 {input_path}')
 
-    io.input_str('按回车enter键继续')
+    io.input_str('按回车enter键继续.')
                                
     images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
     
@@ -177,7 +232,7 @@ def remove_xseg_labels(input_path):
     
     io.log_info(f'处理文件夹 {input_path}')
 
-    io.input_str('Press enter to continue.')
+    io.input_str('按回车enter键继续.')
     
     images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
     

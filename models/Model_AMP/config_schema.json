@@ -16,8 +16,8 @@
         },
         "morph_factor": {
           "type": "number",
-          "minimum":0.0,
-          "maximum":0.5
+          "minimum": 0.0,
+          "maximum": 0.5
         },
         "preview_mf": {
           "type": "number",
@@ -132,43 +132,6 @@
         "random_jpeg": {
           "type": "boolean"
         },
-        "random_shadow_src": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "enabled": {"type": "boolean"},
-              "shadow_low": {"type": "number"},
-              "shadow_high": {"type": "number"},
-              "high_bright_low": {"type": "number"},
-              "high_bright_high": {"type": "number"}
-            },
-            "additionalProperties": false
-          }
-        },
-        "random_shadow_dst": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "enabled": {"type": "boolean"},
-              "shadow_low": {"type": "number"},
-              "shadow_high": {"type": "number"},
-              "high_bright_low": {"type": "number"},
-              "high_bright_high": {"type": "number"}
-            },
-            "additionalProperties": false
-          }
-        },
-        "random_shadow": {
-          "type": "string",
-          "enum": [
-            "none",
-            "all",
-            "src",
-            "dst"
-          ]
-        },
         "random_hsv_power": {
           "type": "number",
           "minimum": 0,
@@ -200,9 +163,6 @@
         },
         "pretrain": {
           "type": "boolean"
-        },
-        "session_name": {
-          "type": "string"
         },
         "autobackup_hour": {
           "type": "integer",
@@ -311,7 +271,6 @@
         "random_warp",
         "resolution",
         "retraining_samples",
-        "session_name",
         "target_iter",
         "uniform_yaw",
         "use_fp16",

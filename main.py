@@ -23,7 +23,7 @@ if __name__ == "__main__":
     if sys.version_info[0] < 3 or (
         sys.version_info[0] == 3 and sys.version_info[1] < 6
     ):
-        raise Exception("该程序至少需要 Python 3.10 版本")
+        raise Exception("该程序至少需要 Python 3.6 版本")
 
     class fixPathAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
@@ -579,6 +579,7 @@ if __name__ == "__main__":
             else None,
             pak_name=arguments.pak_name,
             force_gpu_idxs=arguments.force_gpu_idxs,
+            xseg_models_path=Path(arguments.xseg_dir),
             cpu_only=arguments.cpu_only,
         )
 
@@ -659,6 +660,7 @@ if __name__ == "__main__":
         default=False,
         help="从打印的摘要中移除未使用的选项",
     )
+    p.add_argument('--xseg-dir', required=True, action=fixPathAction, dest="xseg_dir", help="XSeg dir.")
     p.set_defaults(func=process_merge)
 
     videoed_parser = subparsers.add_parser("videoed", help="视频处理。").add_subparsers()

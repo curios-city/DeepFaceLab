@@ -29,11 +29,11 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         if len(seg_sample_idxs) == 0:
             seg_sample_idxs = SegmentedSampleFilterSubprocessor(samples, count_xseg_mask=True).run()
             if len(seg_sample_idxs) == 0:
-                raise Exception(f"未找到分割的人脸.")
+                raise Exception(f"未发现 已写遮罩 的图片.")
             else:
-                io.log_info(f"使用 {len(seg_sample_idxs)} 个 xseg 标记的样本.")
+                io.log_info(f"使用 {len(seg_sample_idxs)} 张 已写遮罩 的图片.")
         else:
-            io.log_info(f"使用 {len(seg_sample_idxs)} 个分割样本.")
+            io.log_info(f"使用 {len(seg_sample_idxs)} 张 手动绘制.")
 
         if self.debug:
             self.generators_count = 1
@@ -72,7 +72,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
 
         random_flip = True
         rotation_range=[-10,10]
-        scale_range=[-0.05, 0.05]
+        scale_range=[-0.1, 0.1]
         tx_range=[-0.05, 0.05]
         ty_range=[-0.05, 0.05]
 

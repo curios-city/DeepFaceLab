@@ -47,7 +47,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         
         if self.samples_len == 0:
             if raise_on_no_data:
-                raise ValueError('No training data provided.')
+                raise ValueError('未提供训练数据, 请检查aligned文件夹')
             else:
                 return
                 
@@ -139,7 +139,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
                     
                     output_samples, random_flip = SampleProcessor.process ([sample], self.sample_process_options, self.output_sample_types, self.debug, ct_sample=ct_sample)
                 except:
-                    raise Exception ("Exception occured in sample %s. Error: %s" % (sample.filename, traceback.format_exc() ) )
+                    raise Exception ("样本 %s 发生异常. Error: %s" % (sample.filename, traceback.format_exc() ) )
 
                 if batches is None:
                     batches = [ [] for _ in range(len(output_samples[0])) ]

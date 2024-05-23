@@ -120,6 +120,9 @@
         "random_jpeg": {
           "type": "boolean"
         },
+        "super_warp": {
+          "type": "boolean"
+        },
         "background_power": {
           "type": "number",
           "minimum": 0.0,

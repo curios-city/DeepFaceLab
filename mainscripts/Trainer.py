@@ -5,7 +5,7 @@ import queue
 import threading
 import time
 from enum import Enum
-
+import webbrowser
 import numpy as np
 import itertools
 from pathlib import Path
@@ -18,6 +18,11 @@ import os
 
 COLAB_TRAIN_STOPPER_FILENAME = 'stopper.txt'
 
+class GlobalMeanLoss:
+    def __init__(self):
+        self.src = "未记录"
+        self.dst = "未记录"
+        
 # adapted from https://stackoverflow.com/a/52295534
 class TensorBoardTool:
     def __init__(self, dir_path):
@@ -26,16 +31,18 @@ class TensorBoardTool:
         from tensorboard import default
         from tensorboard import program
         from tensorboard import version as tb_version
+
         # remove http messages
         log = logging.getLogger('werkzeug').setLevel(logging.ERROR)
         # Start tensorboard server
         tb = program.TensorBoard(default.get_plugins())
-        tb_argv = [None, '--logdir', self.dir_path, '--port', '6006']
-        if int(tb_version.VERSION[0])>=2:
-            tb_argv.append("--bind_all")
+        tb_argv = [None, '--logdir', self.dir_path, '--host', '0.0.0.0', '--port', '6006']
+
+        #if int(tb_version.VERSION[0])>=2:
+            #tb_argv.append("--bind_all")
         tb.configure(argv=tb_argv)
-        url = tb.launch()
-        io.log_info('在{}启动了TensorBoard\n'.format(url))
+        tb.launch()
+
 
 def process_img_for_tensorboard(input_img):
     # convert format from bgr to rgb
@@ -74,6 +81,10 @@ def trainerThread (s2c, c2s, e,
                     config_training_file=None,
                     gen_snapshot=False,
                     **kwargs):
+    
+    global global_mean_loss
+    global_mean_loss = GlobalMeanLoss()
+    
     while True:
         try:
             start_time = time.time()
@@ -142,12 +153,12 @@ def trainerThread (s2c, c2s, e,
                     write_stopping_file('false')
                     return False
                 else:
-                    with open(path, 'r') as f:
+                    with open(path, 'r', encoding='utf-8') as f:
                         return True if f.read() == 'true' else False
 
             def write_stopping_file(value):
                 path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
-                with open(path, 'w') as f:
+                with open(path, 'w', encoding='utf-8') as f:
                     f.write(value)
                     
             def log_step(step, step_time, src_loss, dst_loss):
@@ -179,6 +190,9 @@ def trainerThread (s2c, c2s, e,
                     c2s.put({'op': 'show', 'previews': previews})
                 e.set()  # Set the GUI Thread as Ready
 
+            def open_browser(url):
+                webbrowser.open(url)
+                
             if model.get_target_iter() != 0:
                 if is_reached_goal:
                     io.log_info('模型已经训练到目标迭代。您可以使用预览功能.')
@@ -190,12 +204,34 @@ def trainerThread (s2c, c2s, e,
                 io.log_info('启动中.....')
                 io.log_info('按 Enter 停止训练并保存进度')
                 io.log_info('按 Space 可以切换视图')
-                io.log_info('按 P可以刷新预览图')
+                io.log_info('按 P 可以刷新预览图')
                 io.log_info('按 S 可以保存训练进度')
                 io.log_info('')
-                io.log_info('|保存时间 |迭代次数 |单次时间 |源损失 |目标损失')
-                io.log_info('')
+ 
 
+                if flask_preview == True:
+                    io.log_info('请在浏览器进入：127.0.0.1:6006')
+                    io.log_info('若是在服务器训练，可远程访问！')
+                    io.log_info('')
+                    url ='http://127.0.0.1:6006/'
+                    thread_browser = threading.Timer(15, open_browser, args=[url])
+                    thread_browser.start()
+                    if start_tensorboard == True:
+                        io.log_info('抱歉！两种WEBUI无法同时启用！实时WEB预览优先')       
+                        io.log_info('')
+                elif start_tensorboard == True:
+                    io.log_info('（30秒后自动打开）或在浏览器进入：127.0.0.1:6006')
+                    io.log_info('请不要打开右上方的下拉菜单，只需使用左上方的三个面板！')
+                    io.log_info('首次开启WEB面板，或者刚删过log数据，需要训练五分钟以上，保存数据后才会显示训练内容')
+                    io.log_info('')
+                    url ='http://127.0.0.1:6006/?darkMode=true#timeseries'
+                    thread_browser = threading.Timer(30, open_browser, args=[url])
+                    thread_browser.start()       
+                    
+                io.log_info('[保存时间][迭代次数][单次迭代][SRC损失][DST损失]')
+
+
+                
             last_save_time = time.time()
             last_preview_time = time.time()
 
@@ -246,7 +282,10 @@ def trainerThread (s2c, c2s, e,
                             shared_state['after_save'] = False
 
                             mean_loss = np.mean(loss_history[save_iter:iter], axis=0)
-
+                            
+                            global_mean_loss.src="[{:.4f}]".format(mean_loss[0])
+                            global_mean_loss.dst="[{:.4f}]".format(mean_loss[1])
+                            
                             for loss_value in mean_loss:
                                 loss_string += "[%.4f]" % (loss_value)
 
@@ -279,7 +318,7 @@ def trainerThread (s2c, c2s, e,
                             io.log_info('达到目标迭代.')
                             model_save()
                             is_reached_goal = True
-                            io.log_info('You can use preview now.')
+                            io.log_info('可以开始使用快捷键 P 刷新预览.')
 
                 if not is_reached_goal and (time.time() - last_preview_time) >= tensorboard_preview_interval_min*60:
                     last_preview_time += tensorboard_preview_interval_min*60
@@ -334,6 +373,23 @@ def trainerThread (s2c, c2s, e,
     c2s.put ( {'op':'close'} )
 
 _train_summary_writer = None
+
+def cv_set_titile(oldTitle,newTitle='神农',oneRun=False):
+    """
+    设置窗口标题
+    :param oldTitle: 旧标题
+    :param newTitle: 新标题
+    :param oneRun: 是否只运行一次
+    :return:
+    """
+    if oneRun == False:
+        # 根据窗口名称查找其句柄 然后使用函数修改其标题
+        # 尽量选择一个不常见的英文名 防止误该已有#的窗口标题 初始化时通常取无意义的名字  比如这里取‘aa’
+        handle = win32gui.FindWindow(0, oldTitle)
+        win32gui.SetWindowText(handle, newTitle)
+        oneRun= True
+    return oneRun
+
 def init_writer(model_name, tensorboard_dir, start_tensorboard):
     import tensorboardX
     global _train_summary_writer
@@ -452,11 +508,13 @@ def create_preview_pane_image(previews, selected_preview, loss_history,
 
     # HEAD
     head_lines = [
-        '[s]:save [enter]:exit [-/+]:zoom: %s' % zoom.label,
-        '[p]:update [space]:next preview [l]:change history range',
-        'Preview: "%s" [%d/%d]' % (selected_preview_name, selected_preview + 1, len(previews))
-    ]
-    head_line_height = int(15 * zoom.scale)
+        '[s]:保存 save          [b]:备份 backup          [enter]:退出 exit',
+        '[p]:刷新预览 update    [space]:切换预览模式 next preview',
+        '[l]:loss range         [-/+]:缩放 zoom: %s' % zoom.label,
+        '当前预览模式 Preview: "%s" [%d/%d]' % (selected_preview_name,selected_preview+1, len(previews) )
+        ]
+
+    head_line_height = int(20 * zoom.scale)
     head_height = len(head_lines) * head_line_height
     head = np.ones((head_height, w, c)) * 0.1
 
@@ -485,6 +543,8 @@ def main(**kwargs):
     io.log_info("启动训练程序.\r\n")
 
     no_preview = kwargs.get('no_preview', False)
+    
+    global flask_preview
     flask_preview = kwargs.get('flask_preview', False)
 
     s2c = queue.Queue()
@@ -513,7 +573,7 @@ def main(**kwargs):
         e.wait()  # Wait for inital load to occur.
 
         flask_t = threading.Thread(target=socketio.run, args=(flask_app,),
-                                   kwargs={'debug': True, 'use_reloader': False, 'host': '0.0.0.0'})
+                                   kwargs={'debug': False, 'use_reloader': False, 'host': '0.0.0.0','port':6006})
         
         flask_t.start()
 
@@ -599,7 +659,7 @@ def main(**kwargs):
             except KeyboardInterrupt:
                 s2c.put({'op': 'close'})
     else:
-        wnd_name = "Training preview"
+        wnd_name = "--- ShenNong SAEHD --- Training preview"
         io.named_window(wnd_name)
         io.capture_keys(wnd_name)
 
@@ -649,27 +709,30 @@ def main(**kwargs):
 
             if update_preview:
                 update_preview = False
-
+                # 获取当前选择的预览名称和对应的RGB数据
                 selected_preview_name = previews[selected_preview][0]
                 selected_preview_rgb = previews[selected_preview][1]
-                (h, w, c) = selected_preview_rgb.shape
+                # 获取预览图像的高度、宽度和通道数
+                (h,w,c) = selected_preview_rgb.shape
 
                 # HEAD
                 head_lines = [
-                    '[s]:save [b]:backup [enter]:exit',
-                    '[p]:update [space]:next preview [l]:change history range',
-                    'Preview: "%s" [%d/%d]' % (selected_preview_name, selected_preview + 1, len(previews))
-                ]
+                    '[s]:保存 save                [b]:备份 backup                [enter]:退出 exit',
+                    '[p]:刷新预览 update          [space]:切换预览模式 next preview',
+                    '[l]:loss range               当前预览模式 Preview: "%s" [%d/%d]                单击图像也可刷新' % (selected_preview_name,selected_preview+1, len(previews) )
+                    ]
+                
                 head_line_height = 15
                 head_height = len(head_lines) * head_line_height
-                head = np.ones((head_height, w, c)) * 0.1
+                head = np.ones ( (head_height,w,c) ) * 0.1# 创建头部区域的图像，初始为灰色背景
 
                 for i in range(0, len(head_lines)):
                     t = i * head_line_height
                     b = (i + 1) * head_line_height
-                    head[t:b, 0:w] += imagelib.get_text_image((head_line_height, w, c), head_lines[i], color=[0.8] * c)
+                    # 将文本图像叠加到头部区域
+                    head[t:b, 0:w] += imagelib.get_text_image (  (head_line_height,w,c) , head_lines[i], color=[0.8]*c )
 
-                final = head
+                final = head # 将头部区域作为最终的图像预览结果
 
                 if loss_history is not None:
                     if show_last_history_iters_count == 0:

@@ -268,19 +268,6 @@ class ModelBase(object):
         # 如果是模型的首次运行
         if self.is_first_run():
             io.log_info("\n模型首次运行。")
-        else:
-            # 如果处于训练状态且不是静默启动
-            if self.is_training and not silent_start:
-                # 询问用户是否要重置迭代计数器和损失图表
-                self.reset_training = io.input_bool(
-                    "您是否要重置迭代计数器和损失图表？",
-                    False,
-                    "重置模型的迭代计数器和损失图表，但您的模型不会失去训练进度。"
-                    "如果您总是使用同一个模型进行多次训练，这会很有用。",
-                )
-
-                if self.reset_training:
-                    self.set_iter(0)
 
         # 如果是静默启动
         if silent_start:
@@ -363,7 +350,12 @@ class ModelBase(object):
         self.random_src_flip = self.options.get("random_src_flip", False)
         self.random_dst_flip = self.options.get("random_dst_flip", True)
         self.retraining_samples = self.options.get("retraining_samples", False)
-
+        
+        if self.model_class_name =="ME":
+            self.super_warp = self.options.get("super_warp", False)
+            if self.options["super_warp"] == True:
+                self.rotation_range=[-12,12]
+                self.scale_range=[-0.2, 0.2]
         # 完成初始化
         self.on_initialize()
         # 更新选项中的批处理大小
@@ -414,9 +406,13 @@ class ModelBase(object):
                 if not self.autobackups_path.exists():
                     self.autobackups_path.mkdir(exist_ok=True)
 
-        # 打印训练摘要
-        io.log_info(self.get_summary_text(reduce_clutter=reduce_clutter))
-
+        # 打印训练摘要，加了if是因为前面已经打印过一次了，这是修改后才需再现
+        if self.ask_override:
+            try:
+                io.log_info( self.get_summary_text() )
+            except KeyError:
+                print(f"参数尚未填写完整！将无法保存！")
+                
     def update_sample_for_preview(self, choose_preview_history=False, force_new=False):
         # 更新预览样本
         if self.sample_for_preview is None or choose_preview_history or force_new:
@@ -500,6 +496,13 @@ class ModelBase(object):
         return v
 
     def ask_override(self):
+        # 打印模型摘要
+        try:
+            io.log_info( self.get_summary_text() )
+        except KeyError:
+            print(f"模型首次在神农运行,强制询问参数")
+            return True
+
         # 设置延迟时间，如果在Colab环境中为5秒，否则为10秒
         time_delay = 5 if io.is_colab() else 10
         # 如果处于训练状态且不是首次运行，询问用户是否覆盖模型设置
@@ -511,13 +514,20 @@ class ModelBase(object):
             )
         )
 
-    def ask_author_name(self, default_value="神农汉化"):
-        """
-        # 加载author_name选项，如果不存在则使用默认值
-        default_author_name = self.options["author_name"] = self.load_or_def_option(
-            "author_name", default_value
+    def ask_reset_training(self):
+        # 询问用户是否要重置迭代计数器和损失图表
+        self.reset_training = io.input_bool(
+            "您是否要重置迭代计数器和损失图表？",
+            False,
+            "重置模型的迭代计数器和损失图表，但您的模型不会失去训练进度。"
+            "如果您总是使用同一个模型进行多次训练，这会很有用。",
         )
-        """
+
+        if self.reset_training:
+            self.set_iter(0)
+                
+    def ask_author_name(self, default_value="神农汉化"):
+
         # 询问用户输入名
         self.author_name = io.input_str(
             "模型作者 Author name",
@@ -644,7 +654,17 @@ class ModelBase(object):
             default_retraining_samples,
             help_message="定期重新训练最后16个高损失样本",
         )
-
+    
+    def ask_quick_opt(self):
+        # 加载random_src_flip选项，如果不存在则使用默认值
+        default_quick_opt = self.load_or_def_option("quick_opt", False)
+        # 询问用户是否随机翻转SRC脸部
+        self.options["quick_opt"] = io.input_bool(
+            "训练眼嘴 train eye_mouth (y)  训练皮肤 train skin (n)",
+            default_quick_opt,
+            help_message="先训练眼嘴，等每次保存loss的变化小于0.01的时候训练皮肤（GAN）",
+        )
+        
     # 可被重写的方法
     def on_initialize_options(self):
         pass
@@ -919,20 +939,30 @@ class ModelBase(object):
 
     def generate_next_samples(self):
         # 生成下一批样本
-        sample = []
-        sample_filenames = []
+
+        sample = []  # 用于存储样本数据
+        sample_filenames = []  # 用于存储样本文件名
+
+        # 遍历生成器列表
         for generator in self.generator_list:
+            # 检查生成器是否已初始化
             if generator.is_initialized():
+                # 生成下一批样本
                 batch = generator.generate_next()
+                # 如果生成的是元组形式的样本（包含数据和文件名）
                 if type(batch) is tuple:
-                    sample.append(batch[0])
-                    sample_filenames.append(batch[1])
+                    sample.append(batch[0])  # 将样本数据添加到样本列表中
+                    sample_filenames.append(batch[1])  # 将样本文件名添加到文件名列表中
                 else:
-                    sample.append(batch)
+                    sample.append(batch)  # 将样本添加到样本列表中
             else:
-                sample.append([])
-        self.last_sample = sample
-        self.last_sample_filenames = sample_filenames
+                sample.append([])  # 若生成器未初始化，则将空列表添加到样本列表中
+
+        # 更新上一批样本和文件名
+        self.last_sample = sample  # 更新上一批样本数据
+        self.last_sample_filenames = sample_filenames  # 更新上一批样本文件名
+
+        # 返回生成的样本
         return sample
 
     # 可被重写的方法
@@ -1072,203 +1102,224 @@ class ModelBase(object):
         visible_options = self.options.copy()
         # 参数覆写，用新的局部字典（不需要完整）刷新原字典的对应键值，可增可改
         visible_options.update(self.options_show_override)
-        """
-        # 处理random_shadow_src和random_shadow_dst选项
-        if all(
-            any(i in j for j in visible_options.keys())
-            for i in ["random_shadow_src", "random_shadow_dst"]
-        ):
-            if isinstance(visible_options["random_shadow_src"], list):
-                for opt in visible_options["random_shadow_src"]:
-                    if "enabled" in opt.keys():
-                        visible_options["random_shadow_src"] = opt["enabled"]
-                        break
 
-            if isinstance(visible_options["random_shadow_dst"], list):
-                for opt in visible_options["random_shadow_dst"]:
-                    if "enabled" in opt.keys():
-                        visible_options["random_shadow_dst"] = opt["enabled"]
-                        break
-        """
+        #把参数值汉化
+        def str2cn(option):
+            if str(option) == "False" or str(option) == "n":
+                return "关"
+            elif str(option) == "True" or str(option) == "y":
+                return "开"
+            else:
+                return str(option)
 
+        if self.model_class_name == "XSeg":
+            xs_res = self.options.get("resolution", 256)
+            table = PrettyTable(
+                ["分辨率", "模型作者", "批处理大小", "预训练模式"]
+            )
+            table.add_row(
+                [
+                    str(xs_res),
+                    str2cn(self.author_name),
+                    str2cn(self.batch_size),
+                    str2cn(self.options["pretrain"]),
+                ]
+            )    
+            # 打印表格
+            summary_text = table.get_string()
+            return summary_text
+            
+        elif self.model_class_name =="ME":
+            # 创建一个空表格对象，并指定列名
+            table = PrettyTable(
+                ["模型摘要", "增强选项", "开关", "参数设置", "数值", "本机配置"]
+            )
 
-        # 创建一个空表格对象，并指定列名
-        table = PrettyTable(
-            ["模型摘要", "增强选项", "开关", "参数设置", "数值", "本机配置"]
-        )
-
-        # 添加数据行
-        table.add_row(
-            [
-                "",
-                "重新训练高损失样本:",
-                str(self.options["retraining_samples"]),
-                "批处理大小:",
-                str(self.batch_size),
-                "AdaBelief优化器:"+str(self.options["adabelief"]),
-            ]
-        )
-        table.add_row(
-            [
-                "模型名称:" + self.get_model_name(),
-                "随机翻转SRC:",
-                str(self.options["random_src_flip"]),
-                "",
-                "",
-                "优化器放到GPU上"+str(self.options["models_opt_on_gpu"]),
-            ]
-        )
-        table.add_row(
-            [
-                "模型作者:" + self.get_author_name(),
-                "随机翻转DST:",
-                str(self.options["random_dst_flip"]),
-                "学习率",
-                str(self.options["lr"]),
-                "",
-            ]
-        )
-        table.add_row(
-            [
-                "",
-                "遮罩训练",
-                str(self.options["masked_training"]),
-                "真脸(src)强度",
-                str(self.options["true_face_power"]),
-                "",
-            ]
-        )       
-        table.add_row(
-            [
-                "迭代数:" + str(self.get_iter()),
-                "眼睛优先",
-                str(self.options["eyes_prio"]),
-                "背景(src)强度",
-                str(self.options["background_power"]),
-                "目标迭代次数:" + str(self.options["target_iter"]),
-            ]
-        )
-        table.add_row(
-            [
-                "模型架构:" + str(self.options["archi"]),
-                "嘴巴优先",
-                str(self.options["mouth_prio"]),
-                "人脸(dst)强度",
-                str(self.options["face_style_power"]),
-                "",
-            ]
-        )
-        table.add_row(
-            [
-                "",
-                "侧脸优化",
-                str(self.options["uniform_yaw"]),
-                "背景(dst)强度",
-                str(self.options["bg_style_power"]),
-                "",
-            ]
-        )    
-        table.add_row(
-            [
-                "分辨率:" + str(self.options["resolution"]),
-                "遮罩边缘模糊",
-                str(self.options["blur_out_mask"]),
-                "色彩转换模式",
-                str(self.options["ct_mode"]),
-                "启用梯度裁剪"+str(self.options["clipgrad"]),
-            ]
-        )
-        table.add_row(
-            [
-                "自动编码器(ae_dims):" + str(self.options["ae_dims"]),
-                "使用学习率下降",
-                str(self.options["lr_dropout"]),
-                "",
-                "",
-                "",
-            ]
-        )
-        table.add_row(
-            [
-                "编码器(e_dims):" + str(self.options["e_dims"]),
-                "随机扭曲",
-                str(self.options["random_warp"]),
-                "Loss function",
-                str(self.options["loss_function"]),
-                "",
-            ]
-        )
-        table.add_row(
-            [
-                "解码器(d_dims):" +  str(self.options["d_dims"]),
-                "随机颜色(hsv微变)",
-                str(self.options["random_hsv_power"]),
-                "",
-                "",
-                "记录预览图演变史:" + str(self.options["write_preview_history"]),
-            ]
-        )      
-        table.add_row(
-            [
-                "解码器遮罩(d_mask):" +  str(self.options["d_dims"]),
-                "随机颜色(亮度不变)",
-                str(self.options["random_color"]),
-                "gan_power",
-                str(self.options["gan_power"]),
-                "",
-            ]
-        )   
-        table.add_row(
-            [
-                "",
-                "随机降低采样",
-                str(self.options["random_downsample"]),
-                "gan_patch_size",
-                str(self.options["gan_patch_size"]),
-                "",
-            ]
-        )   
-        table.add_row(
-            [
-                "",
-                "随机添加噪音",
-                str(self.options["random_noise"]),
-                "gan_dims",
-                str(self.options["gan_dims"]),
-                "自动备份间隔:" + str(self.options["autobackup_hour"]) + " 小时",
-            ]
-        )      
-        table.add_row(
-            [
-                "",
-                "随机产生模糊",
-                str(self.options["random_blur"]),
-                "gan_smoothing",
-                str(self.options["gan_smoothing"]),
-                "最大备份数量:" + str(self.options["maximum_n_backups"]),
-            ]
-        )           
-        table.add_row(
-            [
-                "预训练模式:" +  str(self.options["pretrain"]),
-                "随机压缩jpeg",
-                str(self.options["random_jpeg"]),
-                "gan_noise",
-                str(self.options["gan_noise"]),
-                "",
-            ]
-        )    
-        # 设置对齐方式（可选）["模型摘要", "增强选项", "开关", "参数设置", "数值", "本机配置"]
-        table.align["模型摘要"] = "l"  # 左对齐
-        table.align["增强选项"] = "r"  # 居中对齐
-        table.align["开关"] = "l"  # 居中对齐
-        table.align["参数设置"] = "r"  # 居中对齐
-        table.align["数值"] = "l"  # 居中对齐
-        table.align["本机配置"] = "r"  # 居中对齐
-        # 打印表格
-        summary_text = table.get_string()
+            # 添加数据行
+            table.add_row(
+                [
+                    "",
+                    "重新训练高损失样本",
+                    str2cn(self.options["retraining_samples"]),
+                    "批处理大小",
+                    str2cn(self.batch_size),
+                    "AdaBelief优化器: "+str2cn(self.options["adabelief"]),
+                ]
+            )
+            table.add_row(
+                [
+                    "模型名称: " + self.get_model_name(),
+                    "随机翻转SRC",
+                    str2cn(self.options["random_src_flip"]),
+                    "",
+                    "",
+                    "优化器放到GPU上: "+str2cn(self.options["models_opt_on_gpu"]),
+                ]
+            )
+            table.add_row(
+                [
+                    "模型作者: " + self.get_author_name(),
+                    "随机翻转DST",
+                    str2cn(self.options["random_dst_flip"]),
+                    "学习率",
+                    str2cn(self.options["lr"]),
+                    "",
+                ]
+            )
+            table.add_row(
+                [
+                    "",
+                    "遮罩训练",
+                    str2cn(self.options["masked_training"]),
+                    "真脸(src)强度",
+                    str2cn(self.options["true_face_power"]),
+                    "",
+                ]
+            )       
+            table.add_row(
+                [
+                    "迭代数: " + str2cn(self.get_iter()),
+                    "眼睛优先",
+                    str2cn(self.options["eyes_prio"]),
+                    "背景(src)强度",
+                    str2cn(self.options["background_power"]),
+                    "目标迭代次数: " + str2cn(self.options["target_iter"]),
+                ]
+            )
+            table.add_row(
+                [
+                    "模型架构: " + str2cn(self.options["archi"]),
+                    "嘴巴优先",
+                    str2cn(self.options["mouth_prio"]),
+                    "人脸(dst)强度",
+                    str2cn(self.options["face_style_power"]),
+                    "",
+                ]
+            )
+            table.add_row(
+                [
+                    "",
+                    "侧脸优化",
+                    str2cn(self.options["uniform_yaw"]),
+                    "背景(dst)强度",
+                    str2cn(self.options["bg_style_power"]),
+                    "",
+                ]
+            )    
+            table.add_row(
+                [
+                    "分辨率:" + str2cn(self.options["resolution"]),
+                    "遮罩边缘模糊",
+                    str2cn(self.options["blur_out_mask"]),
+                    "色彩转换模式",
+                    str2cn(self.options["ct_mode"]),
+                    "启用梯度裁剪: "+str2cn(self.options["clipgrad"]),
+                ]
+            )
+            table.add_row(
+                [
+                    "自动编码器(ae_dims): " + str2cn(self.options["ae_dims"]),
+                    "使用学习率下降",
+                    str2cn(self.options["lr_dropout"]),
+                    "",
+                    "",
+                    "",
+                ]
+            )
+            table.add_row(
+                [
+                    "编码器(e_dims): " + str2cn(self.options["e_dims"]),
+                    "随机扭曲",
+                    str2cn(self.options["random_warp"]),
+                    "Loss function",
+                    str2cn(self.options["loss_function"]),
+                    "",
+                ]
+            )
+            table.add_row(
+                [
+                    "解码器(d_dims): " +  str2cn(self.options["d_dims"]),
+                    "随机颜色(hsv微变)",
+                    str2cn(self.options["random_hsv_power"]),
+                    "",
+                    "",
+                    "记录预览图演变史: " + str2cn(self.options["write_preview_history"]),
+                ]
+            )      
+            table.add_row(
+                [
+                    "解码器遮罩(d_mask): " +  str2cn(self.options["d_mask_dims"]),
+                    "随机颜色(亮度不变)",
+                    str2cn(self.options["random_color"]),
+                    "gan_power",
+                    str2cn(self.options["gan_power"]),
+                    "",
+                ]
+            )   
+            table.add_row(
+                [
+                    "",
+                    "随机降低采样",
+                    str2cn(self.options["random_downsample"]),
+                    "gan_patch_size",
+                    str2cn(self.options["gan_patch_size"]),
+                    "",
+                ]
+            )   
+            table.add_row(
+                [
+                    "使用fp16:"+str2cn(self.options["use_fp16"]),
+                    "随机添加噪音",
+                    str2cn(self.options["random_noise"]),
+                    "gan_dims",
+                    str2cn(self.options["gan_dims"]),
+                    "自动备份间隔: " + str2cn(self.options["autobackup_hour"]) + " 小时",
+                ]
+            )      
+            table.add_row(
+                [
+                    "",
+                    "随机产生模糊",
+                    str2cn(self.options["random_blur"]),
+                    "gan_smoothing",
+                    str2cn(self.options["gan_smoothing"]),
+                    "",
+                ]
+            )           
+            table.add_row(
+                [
+                    "预训练模式:" +  str2cn(self.options["pretrain"]),
+                    "随机压缩jpeg",
+                    str2cn(self.options["random_jpeg"]),
+                    "gan_noise",
+                    str2cn(self.options["gan_noise"]),
+                    "最大备份数量: " + str2cn(self.options["maximum_n_backups"]),
+                ]
+            )    
+            table.add_row(
+                [
+                    "",
+                    "超级扭曲",
+                    str2cn(self.options["super_warp"]),
+                    "",
+                    "",
+                    "",
+                ]
+            )    
+            # 设置对齐方式（可选）["模型摘要", "增强选项", "开关", "参数设置", "数值", "本机配置"]
+            table.align["模型摘要"] = "l"  # 左对齐
+            table.align["增强选项"] = "r"  # 居中对齐
+            table.align["开关"] = "l"  # 居中对齐
+            table.align["参数设置"] = "r"  # 居中对齐
+            table.align["数值"] = "l"  # 居中对齐
+            table.align["本机配置"] = "r"  # 居中对齐
+            # 打印表格
+            summary_text = table.get_string()
         
-        return summary_text
+            return summary_text
+        else:
+            summary_text = "未定义表格"
+            return summary_text
 
     @staticmethod
     def get_loss_history_preview(loss_history, iter, w, c, lh_height=100):
@@ -1321,34 +1372,65 @@ class ModelBase(object):
             # 计算最大的损失值，用于归一化
             plist_abs_max = np.mean(loss_history[len(loss_history) // 5 :]) * 2
 
+            # 遍历每一列
             for col in range(0, w):
+                # 遍历每一个损失函数
                 for p in range(0, loss_count):
-                    # 设置点的颜色
-                    point_color = [1.0] * c
-                    point_color[0:3] = colorsys.hsv_to_rgb(
-                        p * (1.0 / loss_count), 1.0, 1.0
-                    )
-
-                    # 计算点的位置并绘制到图像上
+                    # 设置数据点的颜色，根据HSV颜色空间生成
+                    point_color = [1.0] * 3
+                    # loss_count=2 , p=0 or 1
+                    #point_color[0:3] = colorsys.hsv_to_rgb(p * (1.0 / loss_count), 1.0, 0.8)
+                    point_color_src=(0.0, 0.8, 0.9)
+                    point_color_dst=(0.8, 0.3, 0.0)
+                    point_color_mix=(0.1, 0.8, 0.0)
+                    # 根据实验，应该是BGR的顺序
+                    if p==0:
+                        point_color=point_color_dst
+                    if p==1:
+                        point_color=point_color_src
+                    # 计算数据点在图像中的位置（最大值和最小值）
                     ph_max = int((plist_max[col][p] / plist_abs_max) * (lh_height - 1))
                     ph_max = np.clip(ph_max, 0, lh_height - 1)
-
                     ph_min = int((plist_min[col][p] / plist_abs_max) * (lh_height - 1))
-                    ph_min = np.clip(ph_min, 0, lh_height - 1)
+                    ph_min = np.clip(ph_min, 0, lh_height-1)  # 将最小值限制在图像高度范围内
 
-                    for ph in range(ph_min, ph_max + 1):
-                        lh_img[(lh_height - ph - 1), col] = point_color
+                    # 遍历从最小值到最大值的范围
+                    for ph in range(ph_min, ph_max+1):
+                        # 在图像数组中根据计算得到的位置和颜色添加标记点
+                        # 注意：由于数组的原点通常位于左上角，所以需要使用(lh_height-ph-1)来将y坐标转换为数组索引
+                        if p==0:
+                            lh_img[(lh_height-ph-1), col] = point_color
+                        if p==1:
+                            current_point_color = lh_img[(lh_height-ph-1), col]
+                            # 叠加新的颜色到当前颜色
+                            #final_color = [min(1.0, current_point_color[i] + point_color_src[i]) for i in range(3)]
+                            #lh_img[(lh_height-ph-1), col] = final_color
+                            if (current_point_color == point_color_dst).all():
+                                lh_img[(lh_height-ph-1), col] = point_color_mix
+                            else:
+                                lh_img[(lh_height-ph-1), col] = point_color_src
+                                
 
-        # 绘制分割线
-        lh_lines = 5
-        lh_line_height = (lh_height - 1) / lh_lines
-        for i in range(0, lh_lines + 1):
-            lh_img[int(i * lh_line_height), :] = (0.8,) * c
+        lh_lines = 8
+        # 计算每行的高度
+        lh_line_height = (lh_height-1)/lh_lines
+        
+        # 设置线条颜色和透明度
+        line_color = (0.2, 0.2, 0.2)  # 灰色
+        
+        for i in range(0,lh_lines+1):
+            # 获取当前分割线所在行的索引
+            line_index = int(i * lh_line_height)
+            # 将当前行的像素值设置为线条颜色和透明度
+            lh_img[line_index, :] = line_color
+            # 原灰色 lh_img[ int(i*lh_line_height), : ] = (0.8,)*c
 
-        # 绘制最后一行文本
-        last_line_t = int((lh_lines - 1) * lh_line_height)
-        last_line_b = int(lh_lines * lh_line_height)
-        lh_text = "迭代: %d" % (iter) if iter != 0 else ""
+        # 计算最后一行文字的高度位置
+        last_line_t = int((lh_lines-1)*lh_line_height)
+        last_line_b = int(lh_lines*lh_line_height)
+
+        lh_text = '迭代数: %d  iter' % (iter) if iter != 0 else ''
+        
         lh_img[last_line_t:last_line_b, 0:w] += imagelib.get_text_image(
             (last_line_b - last_line_t, w, c), lh_text, color=[0.8] * c
         )
